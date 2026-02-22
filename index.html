@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Agency POS Pro V10.4</title>
+    <title>Gamirasa POS V10.5</title>
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --bg: #f8fafc; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
@@ -21,7 +20,7 @@
         .btn-dark { background: var(--primary); color: white; }
         .item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
         #login-screen { position: fixed; inset: 0; background: var(--primary); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        #print-overlay { display: none; position: fixed; inset: 0; background: white; z-index: 9999; padding: 20px; }
+        #print-overlay { display: none; position: fixed; inset: 0; background: white; z-index: 9999; padding: 20px; overflow-y: auto; }
         iframe { position: absolute; width: 0; height: 0; visibility: hidden; }
         .sync-banner { background: #dcfce7; color: #166534; text-align: center; font-size: 0.7rem; padding: 5px; display: none; font-weight: bold; }
     </style>
@@ -32,16 +31,15 @@
 
 <div id="login-screen">
     <div class="card" style="width: 100%; max-width: 350px;">
-        <h2 style="text-align:center">POS PRO V10.4</h2>
-        <p style="text-align:center; font-size:0.8rem; color:gray;">Cloud Sync Active</p>
+        <h2 style="text-align:center">GAMIRASA POS</h2>
         <input type="password" id="sys-pin" placeholder="ENTER PIN" style="text-align:center; font-size: 2rem;">
-        <button class="btn-blue" onclick="checkPin()">UNLOCK SYSTEM</button>
+        <button class="btn-blue" onclick="checkPin()">UNLOCK</button>
     </div>
 </div>
 
 <div id="app-content" style="display:none">
-    <header>AGENCY POS PRO</header>
-    <div id="sync-status" class="sync-banner">☁️ AUTO-SYNCING TO CLOUD...</div>
+    <header>GAMIRASA FOOD PRODUCT</header>
+    <div id="sync-status" class="sync-banner">☁️ CLOUD SYNCING...</div>
     <nav>
         <div class="nav-link active" onclick="showV('pos', this)">BILLING</div>
         <div class="nav-link" onclick="showV('stock', this)">STOCKS</div>
@@ -71,7 +69,7 @@
                     <div style="display:flex; justify-content:space-between; font-size:1.5rem; font-weight:800">
                         <span>TOTAL:</span><span id="bill-total">0.00</span>
                     </div>
-                    <button id="final-btn" class="btn-green" onclick="saveBill()">FINALIZE & PRINT</button>
+                    <button class="btn-green" onclick="saveBill()">FINALIZE & PRINT</button>
                 </div>
             </div>
         </div>
@@ -88,9 +86,7 @@
         </div>
 
         <div id="v-setup" style="display:none">
-            <div class="card">
-                <button class="btn-blue" onclick="cloudAction('pull')">🔄 REFRESH FROM CLOUD</button>
-            </div>
+            <button class="btn-blue" onclick="cloudAction('pull')">🔄 REFRESH FROM CLOUD</button>
             <div class="card">
                 <h3>Product Setup</h3>
                 <input type="text" id="set-p-n" placeholder="Product Name">
@@ -99,13 +95,9 @@
                 <input type="number" id="set-p-sc" placeholder="Scheme (e.g. 12)">
                 <button id="add-prod-btn" class="btn-green" onclick="addItem()">ADD PRODUCT</button>
                 <hr>
-                <h3>Route & Shop Setup</h3>
-                <input type="text" id="set-r-n" placeholder="Route Name">
-                <button class="btn-blue" onclick="addRoute()">ADD ROUTE</button>
+                <input type="text" id="set-r-n" placeholder="Route Name"><button class="btn-blue" onclick="addRoute()">ADD ROUTE</button>
                 <hr>
-                <select id="set-r-sel"></select>
-                <input type="text" id="set-s-n" placeholder="Shop Name">
-                <button class="btn-blue" onclick="addShop()">ADD SHOP</button>
+                <select id="set-r-sel"></select><input type="text" id="set-s-n" placeholder="Shop Name"><button class="btn-blue" onclick="addShop()">ADD SHOP</button>
             </div>
         </div>
     </div>
@@ -113,19 +105,24 @@
 
 <div id="print-overlay">
     <div id="print-data"></div>
-    <div style="display:flex; gap:10px; margin-top:20px;">
-        <button class="btn-green" onclick="doPrint()">PRINT NOW</button>
+    <div class="card">
+        <h4>Credit Tracking (Optional)</h4>
+        <input type="text" id="credit-dates" placeholder="Enter Credit Dates (e.g. 12/02, 15/02)">
+        <input type="number" id="credit-amount" placeholder="Total Credit Amount">
+        <button class="btn-blue" onclick="updatePrintWithCredit()">Update Bill with Credit</button>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom: 50px;">
+        <button class="btn-green" onclick="doPrint()">PRINT INVOICE</button>
         <button class="btn-dark" onclick="closePrint()">CLOSE</button>
     </div>
 </div>
 
 <script>
-    // HARDCODED CLOUD CONFIG
     const CLOUD_TOKEN = "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";
     const CLOUD_GIST = "0c3f0cb67d4be33a00862eb3b31e9ecf";
 
-    let db = JSON.parse(localStorage.getItem('pos_v10')) || { items: [], routes: [], sales: [], settings: { pin: "1234" } };
-    let cart = []; let curS = "";
+    let db = JSON.parse(localStorage.getItem('pos_v10')) || { items: [], routes: [], sales: [], nextBill: 1, settings: { pin: "1234" } };
+    let cart = []; let curS = ""; let currentBillHTML = "";
 
     function checkPin() {
         if(document.getElementById('sys-pin').value === db.settings.pin) {
@@ -136,10 +133,7 @@
         } else { alert("Incorrect PIN"); }
     }
 
-    function sync() { 
-        localStorage.setItem('pos_v10', JSON.stringify(db)); 
-        refresh(); 
-    }
+    function sync() { localStorage.setItem('pos_v10', JSON.stringify(db)); refresh(); }
 
     async function cloudAction(type, silent = false) {
         if(!silent) document.getElementById('sync-status').style.display = 'block';
@@ -154,77 +148,32 @@
                 if(data.files && data.files["pos_v10_db.json"]) {
                     db = JSON.parse(data.files["pos_v10_db.json"].content);
                     sync();
-                    if(!silent) alert("Data Refreshed!");
                 }
             }
-        } catch(e) { console.error("Cloud Error", e); }
+        } catch(e) { console.error(e); }
         document.getElementById('sync-status').style.display = 'none';
     }
 
     function showV(id, el) {
         ['v-pos', 'v-stock', 'v-admin', 'v-setup'].forEach(v => document.getElementById(v).style.display = 'none');
         document.getElementById('v-' + id).style.display = 'block';
-        if(el) {
-            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-            el.classList.add('active');
-        }
+        if(el) { document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
+        if(id === 'pos') { document.getElementById('route-sel').style.display = 'block'; document.getElementById('shop-sel').style.display = 'none'; document.getElementById('bill-ui').style.display = 'none'; }
     }
 
-    // PRODUCT SETUP WITH AUTO-CLEAR
     function addItem() {
-        const nInput = document.getElementById('set-p-n');
-        const pInput = document.getElementById('set-p-p');
-        const sInput = document.getElementById('set-p-s');
-        const scInput = document.getElementById('set-p-sc');
-        const btn = document.getElementById('add-prod-btn');
-
-        if(!nInput.value || !pInput.value) return alert("Enter Product and Price");
-
-        db.items.push({ 
-            name: nInput.value, 
-            price: parseFloat(pInput.value), 
-            stock: parseInt(sInput.value) || 0, 
-            scheme: parseInt(scInput.value) || 0 
-        });
-
-        sync();
-        cloudAction('push', true);
-
-        // Clear Inputs
-        nInput.value = ""; pInput.value = ""; sInput.value = ""; scInput.value = "";
-        
-        // Success Message
-        btn.innerText = "✅ SAVED TO CLOUD";
-        btn.classList.replace('btn-green', 'btn-dark');
-        setTimeout(() => {
-            btn.innerText = "ADD PRODUCT";
-            btn.classList.replace('btn-dark', 'btn-green');
-            nInput.focus();
-        }, 1200);
+        const n = document.getElementById('set-p-n'), p = document.getElementById('set-p-p'), s = document.getElementById('set-p-s'), sc = document.getElementById('set-p-sc');
+        if(!n.value || !p.value) return;
+        db.items.push({ name: n.value, price: parseFloat(p.value), stock: parseInt(s.value)||0, scheme: parseInt(sc.value)||0 });
+        n.value = ""; p.value = ""; s.value = ""; sc.value = "";
+        sync(); cloudAction('push', true);
+        document.getElementById('add-prod-btn').innerText = "✅ SAVED";
+        setTimeout(()=> { document.getElementById('add-prod-btn').innerText = "ADD PRODUCT"; n.focus(); }, 1000);
     }
 
-    function addRoute() {
-        const input = document.getElementById('set-r-n');
-        if(!input.value) return;
-        db.routes.push({ name: input.value, shops: [] });
-        input.value = "";
-        sync();
-        cloudAction('push', true);
-        alert("Route Added");
-    }
+    function addRoute() { const i = document.getElementById('set-r-n'); db.routes.push({ name: i.value, shops: [] }); i.value = ""; sync(); cloudAction('push', true); }
+    function addShop() { const i = document.getElementById('set-s-n'), r = document.getElementById('set-r-sel').value; db.routes[r].shops.push(input.value); i.value = ""; sync(); cloudAction('push', true); }
 
-    function addShop() {
-        const input = document.getElementById('set-s-n');
-        const rIdx = document.getElementById('set-r-sel').value;
-        if(!input.value) return;
-        db.routes[rIdx].shops.push(input.value);
-        input.value = "";
-        sync();
-        cloudAction('push', true);
-        alert("Shop Added");
-    }
-
-    // BILLING LOGIC
     function openR(idx) {
         document.getElementById('route-sel').style.display = 'none';
         document.getElementById('shop-sel').style.display = 'block';
@@ -233,50 +182,69 @@
 
     function openB(s) { curS = s; cart = []; document.getElementById('shop-sel').style.display = 'none'; document.getElementById('bill-ui').style.display = 'block'; document.getElementById('cur-shop').innerText = s; upCart(); }
 
-    function upFree() { 
-        const i = db.items[document.getElementById('i-item').value]; 
-        if(!i) return; 
-        document.getElementById('i-free').value = i.scheme > 0 ? Math.floor(document.getElementById('i-qty').value / i.scheme) : 0; 
-    }
-
-    function addCart() { 
-        const idx = document.getElementById('i-item').value; 
-        if(idx==="") return;
-        cart.push({ ...db.items[idx], qty: parseInt(document.getElementById('i-qty').value), free: parseInt(document.getElementById('i-free').value), idx });
-        upCart();
-    }
-
-    function upCart() { 
-        document.getElementById('cart-list').innerHTML = cart.map((c,i) => `<div class="item-row"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`).join('');
-        upTotal();
-    }
-
-    function upTotal() { 
-        const sub = cart.reduce((s,c)=>s+(c.price*c.qty),0);
-        document.getElementById('bill-total').innerText = (sub - document.getElementById('i-disc').value).toFixed(2);
-    }
+    function upFree() { const i = db.items[document.getElementById('i-item').value]; if(!i) return; document.getElementById('i-free').value = i.scheme > 0 ? Math.floor(document.getElementById('i-qty').value / i.scheme) : 0; }
+    function addCart() { const idx = document.getElementById('i-item').value; if(idx==="") return; cart.push({ ...db.items[idx], qty: parseInt(document.getElementById('i-qty').value), free: parseInt(document.getElementById('i-free').value), idx }); upCart(); }
+    function upCart() { document.getElementById('cart-list').innerHTML = cart.map(c => `<div class="item-row"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`).join(''); upTotal(); }
+    function upTotal() { const sub = cart.reduce((s,c)=>s+(c.price*c.qty),0); document.getElementById('bill-total').innerText = (sub - document.getElementById('i-disc').value).toFixed(2); }
 
     function saveBill() {
         if(!cart.length) return;
+        const bNo = "NIK-" + String(db.nextBill || 1).padStart(4, '0');
         const total = document.getElementById('bill-total').innerText;
-        const html = `<div style="font-family:monospace; text-align:center;"><h2>INVOICE</h2><h3>${curS}</h3><p>${new Date().toLocaleString()}</p><hr>` + 
-            cart.map(c => `<div style="display:flex; justify-content:space-between"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`).join('') + 
-            `<hr><b>TOTAL: ${total}</b></div>`;
+        
+        currentBillHTML = `
+            <div style="font-family:monospace; text-align:center; font-size:12px;">
+                <b style="font-size:16px;">Gamirasa Food Product Pvt Ltd</b><br>
+                No 5379, Yaya 01, Aliolu Ara, Sooriyawewa<br>
+                Tel: 0701242299<br>
+                --------------------------------<br>
+                <b>BILL NO: ${bNo}</b><br>
+                Date: ${new Date().toLocaleString()}<br>
+                Shop: ${curS}<br>
+                --------------------------------<br>
+                <div style="text-align:left">
+                ${cart.map(c => `<div style="display:flex; justify-content:space-between"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`).join('')}
+                </div>
+                --------------------------------<br>
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px;">
+                    <span>NET TOTAL:</span><span>RS. ${total}</span>
+                </div>
+                <div id="credit-print-section"></div>
+                --------------------------------<br>
+                Thank You! Come Again.
+            </div>`;
         
         cart.forEach(c => db.items[c.idx].stock -= (c.qty + c.free));
-        db.sales.push({ date: new Date().toISOString().split('T')[0], shop: curS, total: parseFloat(total), html });
+        db.sales.push({ date: new Date().toISOString().split('T')[0], billNo: bNo, shop: curS, total: parseFloat(total) });
+        db.nextBill = (db.nextBill || 1) + 1;
         
         sync();
         cloudAction('push', true);
         
-        document.getElementById('print-data').innerHTML = html;
+        document.getElementById('print-data').innerHTML = currentBillHTML;
         document.getElementById('print-overlay').style.display = 'block';
+    }
+
+    function updatePrintWithCredit() {
+        const dates = document.getElementById('credit-dates').value;
+        const amt = document.getElementById('credit-amount').value;
+        if(!dates || !amt) return alert("Enter credit details first");
+        
+        const creditHTML = `
+            <div style="text-align:left; margin-top:5px; border-top:1px dashed #000; padding-top:5px;">
+                <b>CREDIT DETAILS:</b><br>
+                Dates: ${dates}<br>
+                Prev. Credit: RS. ${parseFloat(amt).toFixed(2)}<br>
+                <b>OUTSTANDING: RS. ${(parseFloat(amt) + parseFloat(document.getElementById('bill-total').innerText)).toFixed(2)}</b>
+            </div>`;
+        document.getElementById('credit-print-section').innerHTML = creditHTML;
+        alert("Credit details added to bill!");
     }
 
     function doPrint() {
         const frame = document.getElementById('print-frame');
         const doc = frame.contentWindow.document;
-        doc.open(); doc.write('<html><body style="font-family:monospace;">' + document.getElementById('print-data').innerHTML + '</body></html>'); doc.close();
+        doc.open(); doc.write('<html><body style="margin:0; padding:10px;">' + document.getElementById('print-data').innerHTML + '</body></html>'); doc.close();
         setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); }, 500);
     }
     function closePrint() { document.getElementById('print-overlay').style.display = 'none'; showV('pos'); }
@@ -285,7 +253,7 @@
         const d = document.getElementById('rep-date').value;
         const sales = db.sales.filter(s => s.date === d);
         document.getElementById('rep-res').innerHTML = `<h3>Day Total: ${sales.reduce((s,x)=>s+x.total,0).toFixed(2)}</h3>` + 
-            sales.map(s => `<div class="item-row"><b>${s.shop}</b> <span>${s.total.toFixed(2)}</span></div>`).join('');
+            sales.map(s => `<div class="item-row"><span>${s.billNo} - ${s.shop}</span><b>${s.total.toFixed(2)}</b></div>`).join('');
     }
 
     function refresh() {
