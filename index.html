@@ -3,43 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gamirasa Distribution V13.1 - Auto-Clear</title>
+    <title>Gamirasa ERP V13.3 - Cloud Sync Enabled</title>
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #f8fafc; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
-        header { background: var(--primary); color: white; padding: 15px; text-align: center; font-weight: 800; border-bottom: 4px solid var(--accent); }
+        header { background: var(--primary); color: white; padding: 10px; text-align: center; border-bottom: 4px solid var(--accent); }
+        .sync-bar { background: #1e293b; color: #94a3b8; font-size: 0.65rem; text-align: center; padding: 4px; border-bottom: 1px solid #334155; }
         nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
-        .nav-link { flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; font-size: 0.65rem; font-weight: 700; color: #64748b; min-width: 85px; }
-        .nav-link.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
-        .container { padding: 15px; max-width: 800px; margin: auto; padding-bottom: 100px; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .nav-link { flex: 1; padding: 15px 5px; text-align: center; cursor: pointer; font-size: 0.7rem; font-weight: 700; color: #64748b; min-width: 80px; }
+        .nav-link.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: #f1f5f9; }
+        .container { padding: 15px; max-width: 850px; margin: auto; padding-bottom: 100px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; border: 1px solid #e2e8f0; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
         button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; margin-top: 5px; }
         .btn-blue { background: var(--accent); color: white; }
         .btn-green { background: var(--success); color: white; }
         .btn-danger { background: var(--danger); color: white; }
         .btn-dark { background: var(--primary); color: white; }
+        .btn-sm { padding: 6px 12px; width: auto; font-size: 0.75rem; margin: 2px; }
         .item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; align-items: center; }
-        #edit-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; padding: 20px; color: #333; }
-        .modal { background: white; padding: 20px; border-radius: 15px; max-width: 500px; margin: auto; }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; padding: 20px; overflow-y: auto; }
+        .modal { background: white; padding: 20px; border-radius: 15px; max-width: 500px; margin: 20px auto; color: #333; }
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; font-weight: bold; }
+        .bg-pending { background: #fef9c3; color: #854d0e; }
     </style>
 </head>
 <body>
 
-<div id="login-screen" style="position:fixed; inset:0; background:var(--primary); z-index:10000; display:flex; align-items:center; justify-content:center;">
+<div class="sync-bar" id="sync-status">Cloud Sync Ready (Laptop/Mobile Shared)</div>
+
+<div id="login-screen" style="position:fixed; inset:0; background:var(--primary); z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+    <h1 style="color:white; margin-bottom:20px;">GAMIRASA CLOUD</h1>
     <div class="card" style="width:300px; text-align:center;">
-        <h2>GAMIRASA LOGIN</h2>
-        <input type="password" id="sys-pin" placeholder="PIN">
-        <button class="btn-blue" onclick="checkPin()">ENTER</button>
+        <input type="password" id="sys-pin" placeholder="Master PIN" style="text-align:center; font-size:1.5rem;">
+        <button class="btn-blue" onclick="checkPin()">LOGIN & SYNC</button>
     </div>
 </div>
 
 <div id="app-content" style="display:none">
-    <header>GAMIRASA DISTRIBUTION V13.1</header>
+    <header>GAMIRASA DISTRIBUTION</header>
     <nav>
         <div class="nav-link active" onclick="showV('order', this)">Orders</div>
         <div class="nav-link" onclick="showV('delivery', this)">Delivery</div>
-        <div class="nav-link" onclick="showV('stock', this)">Truck Stock</div>
+        <div class="nav-link" onclick="showV('credit', this)">Credits</div>
+        <div class="nav-link" onclick="showV('stock', this)">Truck</div>
         <div class="nav-link" onclick="showV('setup', this)">Setup</div>
     </nav>
 
@@ -48,49 +55,64 @@
             <div id="route-list"></div>
             <div id="shop-list" style="display:none"></div>
             <div id="order-ui" style="display:none">
-                <button onclick="showV('order')" class="btn-dark">← BACK</button>
+                <button onclick="showV('order')" class="btn-dark" style="width:auto; margin-bottom:10px;">← BACK</button>
                 <div class="card">
                     <h2 id="cur-shop"></h2>
                     <select id="i-item" onchange="autoScheme()"></select>
-                    <input type="number" id="i-qty" value="1" oninput="autoScheme()" placeholder="Qty">
-                    <input type="number" id="i-free" value="0" placeholder="Free">
+                    <div style="display:flex; gap:10px">
+                        <input type="number" id="i-qty" value="1" oninput="autoScheme()" placeholder="Qty">
+                        <input type="number" id="i-free" value="0" placeholder="Free">
+                    </div>
                     <button class="btn-blue" onclick="addToOrder()">+ ADD TO LIST</button>
                 </div>
                 <div class="card">
                     <div id="order-cart-list"></div>
-                    <div style="font-size:1.5rem; font-weight:bold; text-align:right;">Total: Rs. <span id="order-total">0.00</span></div>
-                    <button class="btn-green" onclick="savePreOrder()">SAVE PRE-ORDER</button>
+                    <div style="text-align:right; font-size:1.5rem; font-weight:800; border-top:2px solid #eee; padding-top:10px;">
+                        TOTAL: Rs. <span id="order-total">0.00</span>
+                    </div>
+                    <button class="btn-green" onclick="savePreOrder()">CONFIRM PRE-ORDER</button>
                 </div>
             </div>
         </div>
 
         <div id="v-delivery" style="display:none">
+            <div class="card" style="background:#e0f2fe;">
+                <b>📦 Today's Load List:</b>
+                <div id="load-summary" style="font-size:0.8rem; margin-top:5px;"></div>
+            </div>
             <div id="delivery-pending-list"></div>
+        </div>
+
+        <div id="v-credit" style="display:none">
+            <div class="card" style="background:var(--primary); color:white; text-align:center;">
+                Grand Total Credit: <h2 id="grand-credit">Rs. 0.00</h2>
+            </div>
+            <div id="credit-list-ui"></div>
         </div>
 
         <div id="v-stock" style="display:none">
             <div class="card">
-                <h3>Truck Inventory Balance</h3>
+                <h3>Current Truck Stock Balance</h3>
                 <div id="truck-inventory-list"></div>
             </div>
         </div>
 
         <div id="v-setup" style="display:none">
+            <div class="card" style="background:#fef3c7;">
+                <h3>Cloud Sync Control</h3>
+                <button class="btn-dark" onclick="cloudAction('pull')">🔄 FORCE CLOUD REFRESH (Pull from Laptop)</button>
+                <button class="btn-blue" onclick="cloudAction('push')" style="margin-top:10px;">📤 FORCE CLOUD SAVE (Push to Laptop)</button>
+            </div>
             <div class="card">
-                <h3>Add Product</h3>
+                <h3>Product / Route / Shop</h3>
                 <input type="text" id="set-p-n" placeholder="Product Name">
                 <input type="number" id="set-p-p" placeholder="Price">
-                <input type="number" id="set-p-sc" placeholder="Scheme (10 = 10+1)">
-                <input type="number" id="set-p-s" placeholder="Initial Warehouse Stock">
+                <input type="number" id="set-p-sc" placeholder="Scheme (e.g. 10)">
                 <button class="btn-green" onclick="addItem()">SAVE PRODUCT</button>
-            </div>
-            <div class="card">
-                <h3>Add Route</h3>
+                <hr>
                 <input type="text" id="set-r-n" placeholder="Route Name">
                 <button class="btn-blue" onclick="addRoute()">SAVE ROUTE</button>
-            </div>
-            <div class="card">
-                <h3>Add Shop</h3>
+                <hr>
                 <select id="set-r-sel"></select>
                 <input type="text" id="set-s-n" placeholder="Shop Name">
                 <button class="btn-blue" onclick="addShop()">SAVE SHOP</button>
@@ -99,15 +121,19 @@
     </div>
 </div>
 
-<div id="edit-overlay">
+<div id="edit-overlay" class="overlay">
     <div class="modal">
-        <h3>Adjust Delivery</h3>
+        <h2 id="edit-title"></h2>
         <div id="edit-items-area"></div>
-        <hr>
-        <button class="btn-green" onclick="confirmModifiedDelivery('cash')">CASH PAYMENT</button>
-        <button class="btn-dark" onclick="confirmModifiedDelivery('credit')">CREDIT BILL</button>
-        <button class="btn-danger" onclick="cancelEntireOrder()">SHOP CLOSED / REJECTED</button>
-        <button onclick="document.getElementById('edit-overlay').style.display='none'" style="margin-top:10px;">CANCEL</button>
+        <div style="font-size:1.2rem; font-weight:bold; text-align:right; margin:15px 0;">
+            Adjusted: Rs. <span id="edit-total">0.00</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <button class="btn-green" onclick="finishDelivery('cash')">CASH</button>
+            <button class="btn-dark" onclick="finishDelivery('credit')">CREDIT</button>
+        </div>
+        <button class="btn-danger" style="margin-top:10px;" onclick="cancelDelivery()">SHOP CLOSED</button>
+        <button onclick="closeModal()" style="margin-top:10px;">BACK</button>
     </div>
 </div>
 
@@ -115,138 +141,110 @@
     const CLOUD_TOKEN = "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";
     const CLOUD_GIST = "0c3f0cb67d4be33a00862eb3b31e9ecf";
 
-    let db = JSON.parse(localStorage.getItem('pos_v13_1')) || { items: [], routes: [], sales: [], nextBill: 1, settings: { pin: "1234", setupPin: "2705" } };
+    let db = JSON.parse(localStorage.getItem('pos_v13_3')) || { items: [], routes: [], sales: [], nextBill: 1, settings: { pin: "1234", setupPin: "2705" } };
     let cart = []; let curS = ""; let editingOrder = null;
 
     function checkPin() {
         if(document.getElementById('sys-pin').value === db.settings.pin) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
-            refresh(); cloudAction('pull', true);
-        } else { alert("Incorrect PIN"); }
+            cloudAction('pull'); // Always pull latest from cloud on login
+            refresh();
+        } else { alert("Access Denied"); }
     }
 
-    function sync() { localStorage.setItem('pos_v13_1', JSON.stringify(db)); refresh(); }
-
-    async function cloudAction(type, silent = false) {
+    async function cloudAction(type) {
+        document.getElementById('sync-status').innerText = "☁️ Synchronizing...";
         const headers = { "Authorization": `token ${CLOUD_TOKEN}`, "Content-Type": "application/json" };
         try {
             if(type === 'push') {
-                const body = JSON.stringify({ files: { "pos_v13_1_db.json": { content: JSON.stringify(db) } } });
+                const body = JSON.stringify({ files: { "gamirasa_db.json": { content: JSON.stringify(db) } } });
                 await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { method: "PATCH", headers, body });
             } else {
                 const res = await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { headers });
                 const data = await res.json();
-                if(data.files && data.files["pos_v13_1_db.json"]) { db = JSON.parse(data.files["pos_v13_1_db.json"].content); sync(); }
+                if(data.files["gamirasa_db.json"]) {
+                    db = JSON.parse(data.files["gamirasa_db.json"].content);
+                    localStorage.setItem('pos_v13_3', JSON.stringify(db));
+                }
             }
-        } catch(e) { console.error(e); }
+            document.getElementById('sync-status').innerText = "✅ Cloud Sync Active (Last: " + new Date().toLocaleTimeString() + ")";
+            refresh();
+        } catch(e) { document.getElementById('sync-status').innerText = "❌ Sync Failed (Check Connection)"; }
     }
 
-    // --- SETUP WITH AUTO-CLEAR ---
+    function sync() { localStorage.setItem('pos_v13_3', JSON.stringify(db)); cloudAction('push'); refresh(); }
+
+    // --- SETUP & AUTO CLEAR ---
     function addItem() {
-        const n = document.getElementById('set-p-n'), p = document.getElementById('set-p-p'), sc = document.getElementById('set-p-sc'), s = document.getElementById('set-p-s');
-        if(!n.value || !p.value) return;
-        db.items.push({ name: n.value, price: parseFloat(p.value), scheme: parseInt(sc.value)||0, stock: parseInt(s.value)||0 });
-        
-        // Clear inputs for next item
-        n.value = ""; p.value = ""; sc.value = ""; s.value = "";
-        sync(); cloudAction('push', true);
-        alert("Product Saved!");
+        const n = document.getElementById('set-p-n'), p = document.getElementById('set-p-p'), sc = document.getElementById('set-p-sc');
+        db.items.push({ name: n.value, price: parseFloat(p.value), scheme: parseInt(sc.value)||0, stock: 0 });
+        n.value = ""; p.value = ""; sc.value = ""; sync();
     }
+    function addRoute() { const r = document.getElementById('set-r-n'); db.routes.push({ name: r.value, shops: [] }); r.value = ""; sync(); }
+    function addShop() { const s = document.getElementById('set-s-n'), rIdx = document.getElementById('set-r-sel').value; db.routes[rIdx].shops.push(s.value); s.value = ""; sync(); }
 
-    function addRoute() {
-        const r = document.getElementById('set-r-n');
-        if(!r.value) return;
-        db.routes.push({ name: r.value, shops: [] });
-        r.value = ""; // Clear
-        sync(); cloudAction('push', true);
-        alert("Route Saved!");
-    }
-
-    function addShop() {
-        const s = document.getElementById('set-s-n'), rIdx = document.getElementById('set-r-sel').value;
-        if(!s.value) return;
-        db.routes[rIdx].shops.push(s.value);
-        s.value = ""; // Clear
-        sync(); cloudAction('push', true);
-        alert("Shop Saved!");
-    }
-
-    // --- BILLING WITH AUTO-CLEAR ---
-    function addToOrder() {
-        const idx = document.getElementById('i-item').value, qty = document.getElementById('i-qty'), free = document.getElementById('i-free');
-        if(!idx) return;
-        const item = db.items[idx];
-        cart.push({ ...item, qty: parseInt(qty.value), free: parseInt(free.value) });
-        
-        // Reset Item selection and Qty for next item
-        document.getElementById('i-item').value = "";
-        qty.value = "1";
-        free.value = "0";
-        
-        upCart();
-    }
-
-    function savePreOrder() {
-        if(!cart.length) return;
-        db.sales.push({ id: Date.now(), billNo: "ORD-"+db.nextBill++, shop: curS, items: [...cart], total: parseFloat(document.getElementById('order-total').innerText), status: 'pending', date: new Date().toLocaleDateString() });
-        sync(); cloudAction('push', true);
-        alert("Order Recorded!");
-        showV('order');
-    }
-
-    // --- REST OF THE LOGIC (DELIVERY & RECONCILIATION) ---
+    // --- ORDERING ---
     function showV(id, el) {
-        if(id === 'setup') if(prompt("Password:") !== db.settings.setupPin) return;
-        ['v-order', 'v-delivery', 'v-stock', 'v-setup'].forEach(v => document.getElementById(v).style.display = 'none');
+        if(id === 'setup' && prompt("Setup PIN:") !== db.settings.setupPin) return;
+        ['v-order', 'v-delivery', 'v-credit', 'v-stock', 'v-setup'].forEach(v => document.getElementById(v).style.display = 'none');
         document.getElementById('v-' + id).style.display = 'block';
         if(el) { document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
-        if(id === 'order') { document.getElementById('route-list').style.display = 'block'; document.getElementById('shop-list').style.display = 'none'; document.getElementById('order-ui').style.display = 'none'; }
-        if(id === 'delivery') renderDelivery();
-        if(id === 'stock') renderTruckStock();
+        if(id === 'order') resetOrder(); if(id === 'delivery') renderDelivery(); if(id === 'credit') renderCredit(); if(id === 'stock') renderStock();
     }
-
-    function refresh() {
-        document.getElementById('route-list').innerHTML = db.routes.map((r, i) => `<button class="btn-blue" style="margin-bottom:10px" onclick="openR(${i})">${r.name}</button>`).join('');
-        document.getElementById('set-r-sel').innerHTML = db.routes.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
-        document.getElementById('i-item').innerHTML = `<option value="">-- Choose Item --</option>` + db.items.map((it, i) => `<option value="${i}">${it.name}</option>`).join('');
-    }
-
-    function openR(idx) {
-        document.getElementById('route-list').style.display = 'none';
-        document.getElementById('shop-list').style.display = 'block';
-        let h = `<h3>${db.routes[idx].name}</h3>`;
-        db.routes[idx].shops.forEach(s => { h += `<button class="card" onclick="startOrder('${s}')">${s}</button>`; });
-        h += `<button class="btn-dark" onclick="showV('order')">BACK</button>`;
-        document.getElementById('shop-list').innerHTML = h;
+    function resetOrder() { document.getElementById('route-list').style.display = 'block'; document.getElementById('shop-list').style.display = 'none'; document.getElementById('order-ui').style.display = 'none'; }
+    function openRoute(idx) {
+        document.getElementById('route-list').style.display = 'none'; document.getElementById('shop-list').style.display = 'block';
+        let h = `<h3>${db.routes[idx].name}</h3>` + db.routes[idx].shops.map(s => `<button class="card" onclick="startOrder('${s}')">${s}</button>`).join('');
+        document.getElementById('shop-list').innerHTML = h + `<button class="btn-dark" onclick="showV('order')">BACK</button>`;
     }
     function startOrder(shop) { curS = shop; cart = []; document.getElementById('shop-list').style.display = 'none'; document.getElementById('order-ui').style.display = 'block'; document.getElementById('cur-shop').innerText = shop; upCart(); }
     function autoScheme() { const it = db.items[document.getElementById('i-item').value]; if(it && it.scheme > 0) document.getElementById('i-free').value = Math.floor(document.getElementById('i-qty').value / it.scheme); }
-    function upCart() { let t = 0; document.getElementById('order-cart-list').innerHTML = cart.map(c => { t += (c.price*c.qty); return `<div class="item-row"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>` }).join(''); document.getElementById('order-total').innerText = t.toFixed(2); }
-    
+    function addToOrder() { const idx = document.getElementById('i-item').value; if(!idx) return; cart.push({...db.items[idx], qty: parseInt(document.getElementById('i-qty').value), free: parseInt(document.getElementById('i-free').value)}); document.getElementById('i-item').value = ""; document.getElementById('i-qty').value = "1"; document.getElementById('i-free').value = "0"; upCart(); }
+    function upCart() { let t = 0; document.getElementById('order-cart-list').innerHTML = cart.map(c => { t += (c.price*c.qty); return `<div class="item-row"><span>${c.name} x${c.qty}</span><b>${(c.price*c.qty).toFixed(2)}</b></div>` }).join(''); document.getElementById('order-total').innerText = t.toFixed(2); }
+    function savePreOrder() { db.sales.push({ id: Date.now(), billNo: "ORD-"+db.nextBill++, shop: curS, items: [...cart], total: parseFloat(document.getElementById('order-total').innerText), status: 'pending', date: new Date().toLocaleDateString() }); sync(); showV('order'); }
+
+    // --- DELIVERY & PARTIAL REJECT ---
     function renderDelivery() {
         const pending = db.sales.filter(s => s.status === 'pending');
-        document.getElementById('delivery-pending-list').innerHTML = pending.map(s => `<div class="card"><b>${s.shop}</b> (Rs.${s.total.toFixed(2)})<button class="btn-blue" onclick="openEdit(${s.id})">DELIVER / EDIT</button></div>`).join('');
+        const sum = {}; pending.forEach(o => o.items.forEach(i => { if(!sum[i.name]) sum[i.name]=0; sum[i.name]+=(i.qty+i.free); }));
+        document.getElementById('load-summary').innerHTML = Object.keys(sum).map(k => `${k}: <b>${sum[k]}</b>`).join(' | ');
+        document.getElementById('delivery-pending-list').innerHTML = pending.map(s => `<div class="card"><b>${s.shop}</b> (Rs.${s.total.toFixed(2)}) <button class="btn-blue btn-sm" onclick="openEdit(${s.id})">PROCESS</button></div>`).join('');
     }
-
     function openEdit(id) {
         editingOrder = db.sales.find(x => x.id === id);
-        document.getElementById('edit-items-area').innerHTML = editingOrder.items.map((it, i) => `<div class="item-row"><span>${it.name}</span><input type="number" value="${it.qty}" oninput="editingOrder.items[${i}].qty=parseInt(this.value)||0" style="width:80px"></div>`).join('');
+        document.getElementById('edit-title').innerText = editingOrder.shop;
+        document.getElementById('edit-items-area').innerHTML = editingOrder.items.map((it, i) => `<div class="item-row"><span>${it.name}</span><input type="number" value="${it.qty}" oninput="updatePart(${i}, this.value)" style="width:70px"></div>`).join('');
+        document.getElementById('edit-total').innerText = editingOrder.total.toFixed(2);
         document.getElementById('edit-overlay').style.display = 'block';
     }
+    function updatePart(idx, val) {
+        editingOrder.items[idx].qty = parseInt(val) || 0;
+        let t = 0; editingOrder.items.forEach(it => t += (it.price * it.qty));
+        editingOrder.total = t; document.getElementById('edit-total').innerText = t.toFixed(2);
+    }
+    function finishDelivery(type) { editingOrder.status = 'delivered'; editingOrder.paid = (type === 'cash') ? editingOrder.total : 0; closeModal(); sync(); }
+    function cancelDelivery() { editingOrder.status = 'cancelled'; closeModal(); sync(); }
+    function closeModal() { document.getElementById('edit-overlay').style.display = 'none'; renderDelivery(); }
 
-    function confirmModifiedDelivery(type) {
-        editingOrder.status = 'delivered'; editingOrder.paid = (type === 'cash') ? editingOrder.total : 0;
-        editingOrder.items.forEach(c => { const di = db.items.find(i => i.name === c.name); if(di) di.stock -= (c.qty + c.free); });
-        document.getElementById('edit-overlay').style.display = 'none'; sync(); cloudAction('push', true);
+    // --- CREDITS & STOCK ---
+    function renderCredit() {
+        const shops = {}; let grand = 0;
+        db.sales.forEach((s, idx) => { const bal = s.total - (s.paid||0); if(s.status === 'delivered' && bal > 0.01) { if(!shops[s.shop]) shops[s.shop]=[]; shops[s.shop].push({...s, dbIdx: idx, bal}); grand+=bal; } });
+        document.getElementById('grand-credit').innerText = "Rs. " + grand.toFixed(2);
+        document.getElementById('credit-list-ui').innerHTML = Object.keys(shops).map(name => `<div class="card"><b>${name}</b>` + shops[name].map(b => `<div class="item-row"><span>${b.billNo}</span><span>Rs.${b.bal.toFixed(2)} <button class="btn-blue btn-sm" onclick="settle(${b.dbIdx})">PAY</button></span></div>`).join('') + `</div>`).join('');
+    }
+    function settle(idx) { const amt = prompt("Paying:", (db.sales[idx].total - db.sales[idx].paid).toFixed(2)); if(amt) { db.sales[idx].paid += parseFloat(amt); sync(); renderCredit(); } }
+    function renderStock() {
+        const truck = {};
+        db.sales.forEach(s => s.items.forEach(it => { if(!truck[it.name]) truck[it.name]={t:0, s:0}; truck[it.name].t+=(it.qty+it.free); if(s.status==='delivered') truck[it.name].s+=(it.qty+it.free); }));
+        document.getElementById('truck-inventory-list').innerHTML = Object.keys(truck).map(k => `<div class="item-row"><span>${k}</span><span>End Bal: <b>${truck[k].t - truck[k].s}</b></span></div>`).join('');
     }
 
-    function cancelEntireOrder() { editingOrder.status = 'cancelled'; document.getElementById('edit-overlay').style.display = 'none'; sync(); cloudAction('push', true); }
-
-    function renderTruckStock() {
-        const truck = {};
-        db.sales.forEach(s => { s.items.forEach(it => { if(!truck[it.name]) truck[it.name] = { total: 0, sold: 0 }; truck[it.name].total += (it.qty + it.free); if(s.status === 'delivered') truck[it.name].sold += (it.qty + it.free); }); });
-        document.getElementById('truck-inventory-list').innerHTML = Object.keys(truck).map(k => `<div class="item-row"><span>${k}</span><span>Truck Balance: <b>${truck[k].total - truck[k].sold}</b></span></div>`).join('') || "No stock in truck";
+    function refresh() {
+        document.getElementById('route-list').innerHTML = db.routes.map((r, i) => `<button class="btn-blue" style="margin-bottom:10px" onclick="openRoute(${i})">${r.name}</button>`).join('');
+        document.getElementById('set-r-sel').innerHTML = db.routes.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
+        document.getElementById('i-item').innerHTML = `<option value="">Select Item</option>` + db.items.map((it, i) => `<option value="${i}">${it.name}</option>`).join('');
     }
 </script>
 </body>
