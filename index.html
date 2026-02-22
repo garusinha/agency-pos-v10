@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Agency POS Cloud V10.2 (Auto-Sync)</title>
+    <title>Agency POS Pro V10.3</title>
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --bg: #f8fafc; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
@@ -23,7 +23,7 @@
         #login-screen { position: fixed; inset: 0; background: var(--primary); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #print-overlay { display: none; position: fixed; inset: 0; background: white; z-index: 9999; padding: 20px; }
         iframe { position: absolute; width: 0; height: 0; visibility: hidden; }
-        .sync-indicator { font-size: 0.7rem; color: var(--success); font-weight: bold; text-align: center; display: none; }
+        .sync-banner { background: #dcfce7; color: #166534; text-align: center; font-size: 0.7rem; padding: 5px; display: none; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -32,22 +32,21 @@
 
 <div id="login-screen">
     <div class="card" style="width: 100%; max-width: 350px;">
-        <h2 style="text-align:center">POS CLOUD V10.2</h2>
-        <p style="text-align:center; font-size:0.8rem; color:gray;">Auto-Sync Enabled</p>
-        <input type="password" id="sys-pin" placeholder="PIN" style="text-align:center; font-size: 2rem;">
-        <button class="btn-blue" onclick="checkPin()">UNLOCK</button>
-        <button onclick="location.reload(true)" style="background:none; color:#64748b; font-size:0.7rem; margin-top:20px;">Force Refresh System</button>
+        <h2 style="text-align:center">POS PRO V10.3</h2>
+        <p style="text-align:center; font-size:0.8rem; color:gray;">Enterprise Cloud Active</p>
+        <input type="password" id="sys-pin" placeholder="ENTER PIN" style="text-align:center; font-size: 2rem;">
+        <button class="btn-blue" onclick="checkPin()">UNLOCK SYSTEM</button>
     </div>
 </div>
 
 <div id="app-content" style="display:none">
-    <header>AGENCY POS PRO V10.2</header>
-    <div id="sync-banner" class="sync-indicator">☁️ Cloud Syncing...</div>
+    <header>AGENCY POS PRO</header>
+    <div id="sync-status" class="sync-banner">☁️ AUTO-SYNCING TO CLOUD...</div>
     <nav>
         <div class="nav-link active" onclick="showV('pos', this)">BILLING</div>
         <div class="nav-link" onclick="showV('stock', this)">STOCKS</div>
         <div class="nav-link" onclick="showV('admin', this)">REPORTS</div>
-        <div class="nav-link" onclick="showV('setup', this)">CLOUD/SETUP</div>
+        <div class="nav-link" onclick="showV('setup', this)">SETUP</div>
     </nav>
 
     <div class="container">
@@ -78,7 +77,7 @@
         </div>
 
         <div id="v-stock" style="display:none">
-            <div class="card"><h3>Truck Stock</h3><div id="stock-list"></div></div>
+            <div class="card"><h3>Inventory Status</h3><div id="stock-list"></div></div>
         </div>
 
         <div id="v-admin" style="display:none">
@@ -89,22 +88,17 @@
         </div>
 
         <div id="v-setup" style="display:none">
-            <div class="card" style="background: #eff6ff; border: 2px solid var(--accent);">
-                <h3>☁️ CLOUD CONFIG</h3>
-                <input type="password" id="gh-token" placeholder="GitHub Token (ghp_...)">
-                <input type="text" id="gh-gist" placeholder="Gist ID">
-                <div style="display:flex; gap:10px">
-                    <button class="btn-dark" onclick="cloudAction('push')">PUSH (Manual Save)</button>
-                    <button class="btn-blue" onclick="cloudAction('pull')">PULL (Get Data)</button>
-                </div>
+            <div class="card">
+                <button class="btn-blue" onclick="cloudAction('pull')">🔄 REFRESH FROM CLOUD</button>
+                <p style="font-size: 0.7rem; text-align: center; color: gray;">Use this to get data from phone to laptop.</p>
             </div>
             <div class="card">
-                <h3>Setup</h3>
+                <h3>Product & Shop Setup</h3>
                 <input type="text" id="set-p-n" placeholder="Product Name"><input type="number" id="set-p-p" placeholder="Price">
                 <input type="number" id="set-p-s" placeholder="Truck Stock"><input type="number" id="set-p-sc" placeholder="Scheme (e.g. 12)">
-                <button class="btn-green" onclick="addItem()">SAVE & CLOUD SYNC</button>
-                <hr><input type="text" id="set-r-n" placeholder="Route Name"><button class="btn-blue" onclick="addRoute()">SAVE ROUTE</button>
-                <hr><select id="set-r-sel"></select><input type="text" id="set-s-n" placeholder="Shop Name"><button class="btn-blue" onclick="addShop()">SAVE SHOP</button>
+                <button class="btn-green" onclick="addItem()">ADD PRODUCT</button>
+                <hr><input type="text" id="set-r-n" placeholder="Route Name"><button class="btn-blue" onclick="addRoute()">ADD ROUTE</button>
+                <hr><select id="set-r-sel"></select><input type="text" id="set-s-n" placeholder="Shop Name"><button class="btn-blue" onclick="addShop()">ADD SHOP</button>
             </div>
         </div>
     </div>
@@ -119,7 +113,11 @@
 </div>
 
 <script>
-    let db = JSON.parse(localStorage.getItem('pos_v10')) || { items: [], routes: [], sales: [], settings: { pin: "1234", token: "", gist: "" } };
+    // AUTOMATED CONFIG - DO NOT REMOVE
+    const CLOUD_TOKEN = "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";
+    const CLOUD_GIST = "0c3f0cb67d4be33a00862eb3b31e9ecf";
+
+    let db = JSON.parse(localStorage.getItem('pos_v10')) || { items: [], routes: [], sales: [], settings: { pin: "1234" } };
     let cart = []; let curS = "";
 
     function checkPin() {
@@ -127,6 +125,7 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
             refresh();
+            cloudAction('pull', true); // Silent pull on login
         } else { alert("Incorrect PIN"); }
     }
 
@@ -136,30 +135,22 @@
     }
 
     async function cloudAction(type, silent = false) {
-        const token = document.getElementById('gh-token').value || db.settings.token;
-        const gistId = document.getElementById('gh-gist').value || db.settings.gist;
-        if(!token || !gistId) return;
-
-        db.settings.token = token;
-        db.settings.gist = gistId;
-
-        if(silent) document.getElementById('sync-banner').style.display = 'block';
-
-        const headers = { "Authorization": `token ${token}`, "Content-Type": "application/json" };
+        if(!silent) document.getElementById('sync-status').style.display = 'block';
+        const headers = { "Authorization": `token ${CLOUD_TOKEN}`, "Content-Type": "application/json" };
         try {
             if(type === 'push') {
                 const body = JSON.stringify({ files: { "pos_v10_db.json": { content: JSON.stringify(db) } } });
-                await fetch(`https://api.github.com/gists/${gistId}`, { method: "PATCH", headers, body });
-                if(!silent) alert("Cloud Updated Successfully!");
+                await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { method: "PATCH", headers, body });
             } else {
-                const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers });
+                const res = await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { headers });
                 const data = await res.json();
-                db = JSON.parse(data.files["pos_v10_db.json"].content);
-                sync();
-                if(!silent) alert("Data Pulled Successfully!");
+                if(data.files && data.files["pos_v10_db.json"]) {
+                    db = JSON.parse(data.files["pos_v10_db.json"].content);
+                    sync();
+                }
             }
-        } catch(e) { console.error("Sync Error", e); }
-        document.getElementById('sync-banner').style.display = 'none';
+        } catch(e) { console.error("Cloud Error", e); }
+        document.getElementById('sync-status').style.display = 'none';
     }
 
     function showV(id, el) {
@@ -182,13 +173,7 @@
         document.getElementById('shop-sel').innerHTML = db.routes[idx].shops.map(s => `<button class="card" style="text-align:left; font-size:1.1rem" onclick="openB('${s}')">${s}</button>`).join('') + `<button class="btn-dark" onclick="showV('pos')">BACK</button>`;
     }
 
-    function openB(s) { 
-        curS = s; cart = []; 
-        document.getElementById('shop-sel').style.display = 'none'; 
-        document.getElementById('bill-ui').style.display = 'block'; 
-        document.getElementById('cur-shop').innerText = s; 
-        upCart(); 
-    }
+    function openB(s) { curS = s; cart = []; document.getElementById('shop-sel').style.display = 'none'; document.getElementById('bill-ui').style.display = 'block'; document.getElementById('cur-shop').innerText = s; upCart(); }
 
     function upFree() { 
         const i = db.items[document.getElementById('i-item').value]; 
@@ -224,7 +209,7 @@
         db.sales.push({ date: new Date().toISOString().split('T')[0], shop: curS, total: parseFloat(total), html });
         
         sync();
-        cloudAction('push', true); // AUTO SYNC TO CLOUD
+        cloudAction('push', true); // Hidden auto-push
         
         document.getElementById('print-data').innerHTML = html;
         document.getElementById('print-overlay').style.display = 'block';
@@ -236,7 +221,6 @@
         doc.open(); doc.write('<html><body style="font-family:monospace;">' + document.getElementById('print-data').innerHTML + '</body></html>'); doc.close();
         setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); }, 500);
     }
-
     function closePrint() { document.getElementById('print-overlay').style.display = 'none'; showV('pos'); }
 
     function runRep() {
@@ -248,8 +232,7 @@
 
     function addItem() { 
         db.items.push({ name: document.getElementById('set-p-n').value, price: parseFloat(document.getElementById('set-p-p').value), stock: parseInt(document.getElementById('set-p-s').value), scheme: parseInt(document.getElementById('set-p-sc').value) }); 
-        sync(); 
-        cloudAction('push', true); 
+        sync(); cloudAction('push', true); 
     }
     function addRoute() { db.routes.push({ name: document.getElementById('set-r-n').value, shops: [] }); sync(); cloudAction('push', true); }
     function addShop() { db.routes[document.getElementById('set-r-sel').value].shops.push(document.getElementById('set-s-n').value); sync(); cloudAction('push', true); }
@@ -259,8 +242,6 @@
         document.getElementById('set-r-sel').innerHTML = db.routes.map((r,i) => `<option value="${i}">${r.name}</option>`).join('');
         document.getElementById('i-item').innerHTML = `<option value="">-- Select Item --</option>` + db.items.map((it,i) => `<option value="${i}">${it.name}</option>`).join('');
         document.getElementById('stock-list').innerHTML = db.items.map(it => `<div class="item-row"><span>${it.name}</span><b>${it.stock}</b></div>`).join('');
-        document.getElementById('gh-token').value = db.settings.token || "";
-        document.getElementById('gh-gist').value = db.settings.gist || "";
     }
 </script>
 </body>
