@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gamirasa Distribution ERP V14.0</title>
+    <title>Gamirasa ERP V14.1 - Full Pro</title>
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #f1f5f9; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
         header { background: var(--primary); color: white; padding: 12px; text-align: center; border-bottom: 4px solid var(--accent); }
         .sync-status { background: #1e293b; color: #94a3b8; font-size: 0.6rem; text-align: center; padding: 4px; }
         nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
-        .nav-link { flex: 1; padding: 14px 5px; text-align: center; cursor: pointer; font-size: 0.7rem; font-weight: 700; color: #64748b; min-width: 80px; text-transform: uppercase; }
+        .nav-link { flex: 1; padding: 14px 5px; text-align: center; cursor: pointer; font-size: 0.65rem; font-weight: 700; color: #64748b; min-width: 80px; text-transform: uppercase; }
         .nav-link.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: #f8fafc; }
         .container { padding: 15px; max-width: 800px; margin: auto; padding-bottom: 100px; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        .alert-debt { background: #fee2e2; border: 1px solid #f87171; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; }
+        .alert-debt { background: #fee2e2; border: 1px solid #f87171; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; font-size: 0.8rem; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
         button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; }
         .btn-blue { background: var(--accent); color: white; }
@@ -24,15 +24,15 @@
         .item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; align-items: center; }
         .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; padding: 15px; overflow-y: auto; }
         .modal { background: white; padding: 20px; border-radius: 15px; max-width: 500px; margin: auto; color: #333; }
-        .qty-input { width: 70px; text-align: center; padding: 5px; margin: 0; }
+        @media print { .no-print { display: none; } body { background: white; } .modal { box-shadow: none; border: none; } }
     </style>
 </head>
 <body>
 
-<div class="sync-status" id="sync-info">System Offline</div>
+<div class="sync-status" id="sync-info">System Loading...</div>
 
 <div id="login-screen" style="position:fixed; inset:0; background:var(--primary); z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-    <h2 style="color:white;">GAMIRASA ERP V14</h2>
+    <h2 style="color:white;">GAMIRASA ERP V14.1</h2>
     <div class="card" style="width:280px; text-align:center;">
         <input type="password" id="sys-pin" placeholder="ENTER PIN" style="text-align:center; font-size:1.5rem;">
         <button class="btn-blue" onclick="checkPin()">UNLOCK</button>
@@ -41,11 +41,11 @@
 
 <div id="app-content" style="display:none">
     <header>GAMIRASA FOOD PRODUCT</header>
-    <nav>
+    <nav class="no-print">
         <div class="nav-link active" onclick="showV('order', this)">Orders</div>
         <div class="nav-link" onclick="showV('delivery', this)">Delivery</div>
         <div class="nav-link" onclick="showV('credit', this)">Credits</div>
-        <div class="nav-link" onclick="showV('stock', this)">Truck Stock</div>
+        <div class="nav-link" onclick="showV('stock', this)">Stock</div>
         <div class="nav-link" onclick="showV('setup', this)">Setup</div>
     </nav>
 
@@ -54,7 +54,7 @@
             <div id="route-list"></div>
             <div id="shop-list" style="display:none"></div>
             <div id="order-ui" style="display:none">
-                <button onclick="showV('order')" class="btn-dark" style="width:auto; margin-bottom:10px;">← BACK</button>
+                <button onclick="showV('order')" class="btn-dark no-print" style="width:auto; margin-bottom:10px;">← BACK</button>
                 <div id="debt-warning-area"></div>
                 <div class="card">
                     <h2 id="cur-shop"></h2>
@@ -75,7 +75,7 @@
 
         <div id="v-delivery" style="display:none">
             <div class="card" style="background:#e0f2fe;">
-                <b>📋 Load Summary:</b>
+                <b>📋 Loading List:</b>
                 <div id="load-summary" style="font-size:0.8rem; margin-top:5px;"></div>
             </div>
             <div id="delivery-pending-list"></div>
@@ -90,21 +90,25 @@
 
         <div id="v-stock" style="display:none">
             <div class="card">
-                <h3>Truck Inventory Balance</h3>
+                <h3>Truck Balance (End of Day)</h3>
                 <div id="truck-inventory-list"></div>
+            </div>
+            <div class="card">
+                <h3>Warehouse Inventory</h3>
+                <div id="warehouse-list"></div>
             </div>
         </div>
 
         <div id="v-setup" style="display:none">
             <div class="card">
-                <h3>Cloud Controls</h3>
-                <button class="btn-dark" onclick="cloudAction('pull')">🔄 REFRESH FROM CLOUD</button>
+                <button class="btn-dark" onclick="cloudAction('pull')">🔄 SYNC FROM CLOUD</button>
             </div>
             <div class="card">
-                <h3>Setup Data</h3>
-                <input type="text" id="set-p-n" placeholder="Product Name">
+                <h3>Add Product</h3>
+                <input type="text" id="set-p-n" placeholder="Name">
                 <input type="number" id="set-p-p" placeholder="Price">
                 <input type="number" id="set-p-sc" placeholder="Scheme">
+                <input type="number" id="set-p-s" placeholder="Stock Qty">
                 <button class="btn-green" onclick="addItem()">SAVE PRODUCT</button>
                 <hr>
                 <input type="text" id="set-r-n" placeholder="Route Name"><button class="btn-blue" onclick="addRoute()">SAVE ROUTE</button>
@@ -117,30 +121,30 @@
 </div>
 
 <div id="edit-overlay" class="overlay">
-    <div class="modal">
-        <h2 id="edit-title">Process Delivery</h2>
+    <div class="modal" id="print-area">
+        <h2 id="edit-title" style="margin-top:0"></h2>
         <div id="edit-items-area"></div>
-        <div class="card" style="background:#fff1f2; margin-top:10px;">
-            <label><b>Return Items Value (Rs.)</b></label>
-            <input type="number" id="return-value" value="0" oninput="calculateFinalTotal()" placeholder="0.00">
+        <div class="no-print">
+            <label><b>Returns (Rs.)</b></label>
+            <input type="number" id="return-value" value="0" oninput="calculateFinalTotal()">
         </div>
-        <div style="font-size:1.3rem; font-weight:bold; text-align:right; margin:15px 0; color:var(--primary);">
-            Final Total: Rs. <span id="edit-total">0.00</span>
+        <div style="font-size:1.3rem; font-weight:bold; text-align:right; margin:15px 0;">
+            Total: Rs. <span id="edit-total">0.00</span>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <button class="btn-green" onclick="finishDelivery('cash')">CASH</button>
-            <button class="btn-dark" onclick="finishDelivery('credit')">CREDIT</button>
+        <div class="no-print" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <button class="btn-green" id="btn-cash" onclick="finishDelivery('cash')">CASH</button>
+            <button class="btn-dark" id="btn-credit" onclick="finishDelivery('credit')">CREDIT</button>
         </div>
-        <button class="btn-danger" style="margin-top:10px;" onclick="cancelDelivery()">SHOP CLOSED / REJECTED</button>
-        <button onclick="closeModal()" style="margin-top:10px; background:#ddd;">CLOSE</button>
+        <button class="btn-blue no-print" style="margin-top:10px;" onclick="window.print()">🖨️ PRINT BILL</button>
+        <button class="btn-danger no-print" id="btn-cancel" style="margin-top:10px;" onclick="cancelDelivery()">SHOP CLOSED</button>
+        <button onclick="closeModal()" class="no-print" style="margin-top:10px; background:#ddd;">CLOSE</button>
     </div>
 </div>
 
 <script>
     const CLOUD_TOKEN = "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";
     const CLOUD_GIST = "0c3f0cb67d4be33a00862eb3b31e9ecf";
-
-    let db = JSON.parse(localStorage.getItem('pos_v14')) || { items: [], routes: [], sales: [], nextBill: 1, settings: { pin: "1234", setupPin: "2705" } };
+    let db = JSON.parse(localStorage.getItem('pos_v14_1')) || { items: [], routes: [], sales: [], nextBill: 1, settings: { pin: "1234", setupPin: "2705" } };
     let cart = []; let curS = ""; let editingOrder = null;
 
     function checkPin() {
@@ -148,11 +152,11 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
             cloudAction('pull');
-        } else { alert("Access Denied"); }
+        } else { alert("Wrong PIN"); }
     }
 
     async function cloudAction(type) {
-        document.getElementById('sync-info').innerText = "Syncing Cloud...";
+        document.getElementById('sync-info').innerText = "☁️ Syncing...";
         const headers = { "Authorization": `token ${CLOUD_TOKEN}`, "Content-Type": "application/json" };
         try {
             if(type === 'push') {
@@ -160,14 +164,14 @@
             } else {
                 const res = await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { headers });
                 const data = await res.json();
-                if(data.files["gamirasa_erp.json"]) { db = JSON.parse(data.files["gamirasa_erp.json"].content); localStorage.setItem('pos_v14', JSON.stringify(db)); }
+                if(data.files["gamirasa_erp.json"]) { db = JSON.parse(data.files["gamirasa_erp.json"].content); localStorage.setItem('pos_v14_1', JSON.stringify(db)); }
             }
-            document.getElementById('sync-info').innerText = "Cloud Sync Active: " + new Date().toLocaleTimeString();
+            document.getElementById('sync-info').innerText = "✅ Cloud Ready: " + new Date().toLocaleTimeString();
             refresh();
-        } catch(e) { document.getElementById('sync-info').innerText = "Sync Failed - Offline"; }
+        } catch(e) { document.getElementById('sync-info').innerText = "⚠️ Offline Mode"; }
     }
 
-    function sync() { localStorage.setItem('pos_v14', JSON.stringify(db)); cloudAction('push'); refresh(); }
+    function sync() { localStorage.setItem('pos_v14_1', JSON.stringify(db)); cloudAction('push'); refresh(); }
 
     function showV(id, el) {
         if(id === 'setup' && prompt("PIN:") !== db.settings.setupPin) return;
@@ -177,100 +181,76 @@
         if(id === 'order') resetOrder(); if(id === 'delivery') renderDelivery(); if(id === 'credit') renderCredit(); if(id === 'stock') renderStock();
     }
 
-    // --- ORDERING WITH DEBT AWARENESS ---
+    // --- SETUP WITH AUTO-CLEAR ---
+    function addItem() {
+        const n=document.getElementById('set-p-n'), p=document.getElementById('set-p-p'), sc=document.getElementById('set-p-sc'), s=document.getElementById('set-p-s');
+        db.items.push({ name: n.value, price: parseFloat(p.value), scheme: parseInt(sc.value)||0, stock: parseInt(s.value)||0 });
+        n.value=""; p.value=""; sc.value=""; s.value=""; sync();
+    }
+    function addRoute() { const r=document.getElementById('set-r-n'); db.routes.push({ name: r.value, shops: [] }); r.value=""; sync(); }
+    function addShop() { const s=document.getElementById('set-s-n'), rIdx=document.getElementById('set-r-sel').value; db.routes[rIdx].shops.push(s.value); s.value=""; sync(); }
+
+    // --- ORDERING ---
     function resetOrder() { document.getElementById('route-list').style.display = 'block'; document.getElementById('shop-list').style.display = 'none'; document.getElementById('order-ui').style.display = 'none'; }
-    
     function openRoute(idx) {
         document.getElementById('route-list').style.display = 'none'; document.getElementById('shop-list').style.display = 'block';
         let h = `<h3>${db.routes[idx].name}</h3>` + db.routes[idx].shops.map(s => `<button class="card" onclick="startOrder('${s}')">${s}</button>`).join('');
         document.getElementById('shop-list').innerHTML = h + `<button class="btn-dark" onclick="showV('order')">BACK</button>`;
     }
-
     function startOrder(shop) {
-        curS = shop; cart = [];
-        document.getElementById('shop-list').style.display = 'none';
-        document.getElementById('order-ui').style.display = 'block';
-        document.getElementById('cur-shop').innerText = shop;
-        
-        // CHECK PREVIOUS DEBT
+        curS = shop; cart = []; document.getElementById('shop-list').style.display = 'none'; document.getElementById('order-ui').style.display = 'block'; document.getElementById('cur-shop').innerText = shop;
         const debt = db.sales.filter(s => s.shop === shop && s.status === 'delivered').reduce((a,b) => a + (b.total - (b.paid||0)), 0);
-        document.getElementById('debt-warning-area').innerHTML = debt > 0.1 ? `<div class="alert-debt">⚠️ SHOP HAS PREVIOUS DEBT: Rs. ${debt.toFixed(2)}</div>` : "";
-        updateCartUI();
+        document.getElementById('debt-warning-area').innerHTML = debt > 0.1 ? `<div class="alert-debt">⚠️ PREVIOUS DEBT: Rs. ${debt.toFixed(2)}</div>` : "";
+        upCart();
     }
-
     function autoScheme() { const it = db.items[document.getElementById('i-item').value]; if(it && it.scheme > 0) document.getElementById('i-free').value = Math.floor(document.getElementById('i-qty').value / it.scheme); }
-    function addToOrder() { const idx = document.getElementById('i-item').value; if(!idx) return; cart.push({...db.items[idx], qty: parseInt(document.getElementById('i-qty').value), free: parseInt(document.getElementById('i-free').value)}); document.getElementById('i-item').value = ""; document.getElementById('i-qty').value = "1"; document.getElementById('i-free').value = "0"; updateCartUI(); }
-    function updateCartUI() { let t = 0; document.getElementById('order-cart-list').innerHTML = cart.map(c => { t += (c.price*c.qty); return `<div class="item-row"><span>${c.name} x${c.qty}</span><b>${(c.price*c.qty).toFixed(2)}</b></div>` }).join(''); document.getElementById('order-total').innerText = t.toFixed(2); }
+    function addToOrder() { const idx = document.getElementById('i-item').value; if(!idx) return; cart.push({...db.items[idx], qty: parseInt(document.getElementById('i-qty').value), free: parseInt(document.getElementById('i-free').value)}); document.getElementById('i-item').value = ""; document.getElementById('i-qty').value = "1"; document.getElementById('i-free').value = "0"; upCart(); }
+    function upCart() { let t = 0; document.getElementById('order-cart-list').innerHTML = cart.map(c => { t += (c.price*c.qty); return `<div class="item-row"><span>${c.name} x${c.qty}</span><b>${(c.price*c.qty).toFixed(2)}</b></div>` }).join(''); document.getElementById('order-total').innerText = t.toFixed(2); }
     function savePreOrder() { db.sales.push({ id: Date.now(), billNo: "ORD-"+db.nextBill++, shop: curS, items: [...cart], total: parseFloat(document.getElementById('order-total').innerText), status: 'pending', date: new Date().toLocaleDateString() }); sync(); showV('order'); }
 
-    // --- DELIVERY WITH RETURNS & REJECTS ---
+    // --- DELIVERY / PRINT ---
     function renderDelivery() {
         const pending = db.sales.filter(s => s.status === 'pending');
         const sum = {}; pending.forEach(o => o.items.forEach(i => { if(!sum[i.name]) sum[i.name]=0; sum[i.name]+=(i.qty+i.free); }));
         document.getElementById('load-summary').innerHTML = Object.keys(sum).map(k => `${k}: <b>${sum[k]}</b>`).join(' | ');
-        document.getElementById('delivery-pending-list').innerHTML = pending.map(s => `<div class="card"><b>${s.shop}</b> (Bill: Rs.${s.total.toFixed(2)}) <button class="btn-blue btn-sm" onclick="openDeliveryModal(${s.id})">PREVIEW & DELIVER</button></div>`).join('');
+        document.getElementById('delivery-pending-list').innerHTML = pending.map(s => `<div class="card"><b>${s.shop}</b> (Rs.${s.total.toFixed(2)}) <button class="btn-blue btn-sm" onclick="openDelModal(${s.id})">DELIVER</button></div>`).join('');
     }
-
-    function openDeliveryModal(id) {
+    function openDelModal(id) {
         editingOrder = db.sales.find(x => x.id === id);
-        document.getElementById('edit-title').innerText = "Finalize: " + editingOrder.shop;
-        document.getElementById('return-value').value = 0;
-        document.getElementById('edit-items-area').innerHTML = editingOrder.items.map((it, i) => `
-            <div class="item-row">
-                <span>${it.name} (Rs.${it.price})</span>
-                <input type="number" class="qty-input" value="${it.qty}" oninput="updatePartialDelivery(${i}, this.value)">
-            </div>
-        `).join('');
-        calculateFinalTotal();
-        document.getElementById('edit-overlay').style.display = 'block';
+        document.getElementById('edit-title').innerText = "Bill: " + editingOrder.shop;
+        document.getElementById('edit-items-area').innerHTML = editingOrder.items.map((it, i) => `<div class="item-row"><span>${it.name}</span><input type="number" class="qty-input" style="width:60px" value="${it.qty}" oninput="updateDelQty(${i}, this.value)"></div>`).join('');
+        document.getElementById('btn-cash').style.display = 'block'; document.getElementById('btn-credit').style.display = 'block'; document.getElementById('btn-cancel').style.display = 'block';
+        calculateFinalTotal(); document.getElementById('edit-overlay').style.display = 'block';
     }
-
-    function updatePartialDelivery(idx, val) {
-        editingOrder.items[idx].qty = parseInt(val) || 0;
-        calculateFinalTotal();
-    }
-
+    function updateDelQty(idx, val) { editingOrder.items[idx].qty = parseInt(val) || 0; calculateFinalTotal(); }
     function calculateFinalTotal() {
-        let t = 0;
-        editingOrder.items.forEach(it => t += (it.price * it.qty));
+        let t = 0; editingOrder.items.forEach(it => t += (it.price * it.qty));
         const returns = parseFloat(document.getElementById('return-value').value) || 0;
-        editingOrder.total = t - returns;
-        document.getElementById('edit-total').innerText = editingOrder.total.toFixed(2);
+        editingOrder.total = t - returns; document.getElementById('edit-total').innerText = editingOrder.total.toFixed(2);
     }
-
-    function finishDelivery(type) {
-        editingOrder.status = 'delivered';
-        editingOrder.paid = (type === 'cash') ? editingOrder.total : 0;
-        // Deduct Stock
+    function finishDelivery(type) { 
+        editingOrder.status = 'delivered'; editingOrder.paid = (type === 'cash') ? editingOrder.total : 0;
         editingOrder.items.forEach(c => { const di = db.items.find(i => i.name === c.name); if(di) di.stock -= (c.qty + c.free); });
-        closeModal(); sync();
+        sync(); alert("Delivered!"); 
     }
-
-    function cancelDelivery() {
-        if(confirm("Mark Shop as Closed/Rejected? Stock remains in truck.")) { editingOrder.status = 'cancelled'; closeModal(); sync(); }
-    }
-
+    function cancelDelivery() { editingOrder.status = 'cancelled'; closeModal(); sync(); }
     function closeModal() { document.getElementById('edit-overlay').style.display = 'none'; renderDelivery(); }
 
-    // --- CREDITS & STOCK ---
+    // --- CREDIT & STOCK ---
     function renderCredit() {
         let grand = 0; const shops = {};
         db.sales.forEach((s, idx) => { const bal = s.total - (s.paid||0); if(s.status === 'delivered' && bal > 0.01) { if(!shops[s.shop]) shops[s.shop]=[]; shops[s.shop].push({...s, dbIdx: idx, bal}); grand+=bal; } });
         document.getElementById('grand-credit').innerText = "Rs. " + grand.toFixed(2);
         document.getElementById('credit-list-ui').innerHTML = Object.keys(shops).map(name => `<div class="card"><b>${name}</b>` + shops[name].map(b => `<div class="item-row"><span>${b.billNo}</span><span>Rs.${b.bal.toFixed(2)} <button class="btn-blue btn-sm" onclick="settle(${b.dbIdx})">PAY</button></span></div>`).join('') + `</div>`).join('');
     }
-    function settle(idx) { const amt = prompt("Amount Received:", (db.sales[idx].total - db.sales[idx].paid).toFixed(2)); if(amt) { db.sales[idx].paid += parseFloat(amt); sync(); renderCredit(); } }
+    function settle(idx) { const amt = prompt("Amt:", (db.sales[idx].total - db.sales[idx].paid).toFixed(2)); if(amt) { db.sales[idx].paid += parseFloat(amt); sync(); renderCredit(); } }
 
     function renderStock() {
         const truck = {};
         db.sales.forEach(s => s.items.forEach(it => { if(!truck[it.name]) truck[it.name]={t:0, s:0}; truck[it.name].t+=(it.qty+it.free); if(s.status==='delivered') truck[it.name].s+=(it.qty+it.free); }));
         document.getElementById('truck-inventory-list').innerHTML = Object.keys(truck).map(k => `<div class="item-row"><span>${k}</span><span>End-of-Day: <b>${truck[k].t - truck[k].s}</b></span></div>`).join('');
+        document.getElementById('warehouse-list').innerHTML = db.items.map(it => `<div class="item-row"><span>${it.name}</span><b>${it.stock}</b></div>`).join('');
     }
-
-    // --- SETUP ---
-    function addItem() { db.items.push({ name: document.getElementById('set-p-n').value, price: parseFloat(document.getElementById('set-p-p').value), scheme: parseInt(document.getElementById('set-p-sc').value)||0, stock: 0 }); sync(); }
-    function addRoute() { db.routes.push({ name: document.getElementById('set-r-n').value, shops: [] }); sync(); }
-    function addShop() { db.routes[document.getElementById('set-r-sel').value].shops.push(document.getElementById('set-s-n').value); sync(); }
 
     function refresh() {
         document.getElementById('route-list').innerHTML = db.routes.map((r, i) => `<button class="btn-blue" style="margin-bottom:10px" onclick="openRoute(${i})">${r.name}</button>`).join('');
