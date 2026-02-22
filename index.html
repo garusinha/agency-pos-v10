@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Agency POS Pro V10.3</title>
+    <title>Agency POS Pro V10.4</title>
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --bg: #f8fafc; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
@@ -32,8 +32,8 @@
 
 <div id="login-screen">
     <div class="card" style="width: 100%; max-width: 350px;">
-        <h2 style="text-align:center">POS PRO V10.3</h2>
-        <p style="text-align:center; font-size:0.8rem; color:gray;">Enterprise Cloud Active</p>
+        <h2 style="text-align:center">POS PRO V10.4</h2>
+        <p style="text-align:center; font-size:0.8rem; color:gray;">Cloud Sync Active</p>
         <input type="password" id="sys-pin" placeholder="ENTER PIN" style="text-align:center; font-size: 2rem;">
         <button class="btn-blue" onclick="checkPin()">UNLOCK SYSTEM</button>
     </div>
@@ -90,15 +90,22 @@
         <div id="v-setup" style="display:none">
             <div class="card">
                 <button class="btn-blue" onclick="cloudAction('pull')">🔄 REFRESH FROM CLOUD</button>
-                <p style="font-size: 0.7rem; text-align: center; color: gray;">Use this to get data from phone to laptop.</p>
             </div>
             <div class="card">
-                <h3>Product & Shop Setup</h3>
-                <input type="text" id="set-p-n" placeholder="Product Name"><input type="number" id="set-p-p" placeholder="Price">
-                <input type="number" id="set-p-s" placeholder="Truck Stock"><input type="number" id="set-p-sc" placeholder="Scheme (e.g. 12)">
-                <button class="btn-green" onclick="addItem()">ADD PRODUCT</button>
-                <hr><input type="text" id="set-r-n" placeholder="Route Name"><button class="btn-blue" onclick="addRoute()">ADD ROUTE</button>
-                <hr><select id="set-r-sel"></select><input type="text" id="set-s-n" placeholder="Shop Name"><button class="btn-blue" onclick="addShop()">ADD SHOP</button>
+                <h3>Product Setup</h3>
+                <input type="text" id="set-p-n" placeholder="Product Name">
+                <input type="number" id="set-p-p" placeholder="Price">
+                <input type="number" id="set-p-s" placeholder="Truck Stock">
+                <input type="number" id="set-p-sc" placeholder="Scheme (e.g. 12)">
+                <button id="add-prod-btn" class="btn-green" onclick="addItem()">ADD PRODUCT</button>
+                <hr>
+                <h3>Route & Shop Setup</h3>
+                <input type="text" id="set-r-n" placeholder="Route Name">
+                <button class="btn-blue" onclick="addRoute()">ADD ROUTE</button>
+                <hr>
+                <select id="set-r-sel"></select>
+                <input type="text" id="set-s-n" placeholder="Shop Name">
+                <button class="btn-blue" onclick="addShop()">ADD SHOP</button>
             </div>
         </div>
     </div>
@@ -113,7 +120,7 @@
 </div>
 
 <script>
-    // AUTOMATED CONFIG - DO NOT REMOVE
+    // HARDCODED CLOUD CONFIG
     const CLOUD_TOKEN = "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";
     const CLOUD_GIST = "0c3f0cb67d4be33a00862eb3b31e9ecf";
 
@@ -125,7 +132,7 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
             refresh();
-            cloudAction('pull', true); // Silent pull on login
+            cloudAction('pull', true); 
         } else { alert("Incorrect PIN"); }
     }
 
@@ -147,6 +154,7 @@
                 if(data.files && data.files["pos_v10_db.json"]) {
                     db = JSON.parse(data.files["pos_v10_db.json"].content);
                     sync();
+                    if(!silent) alert("Data Refreshed!");
                 }
             }
         } catch(e) { console.error("Cloud Error", e); }
@@ -160,13 +168,63 @@
             document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
             el.classList.add('active');
         }
-        if(id === 'pos') {
-            document.getElementById('route-sel').style.display = 'block';
-            document.getElementById('shop-sel').style.display = 'none';
-            document.getElementById('bill-ui').style.display = 'none';
-        }
     }
 
+    // PRODUCT SETUP WITH AUTO-CLEAR
+    function addItem() {
+        const nInput = document.getElementById('set-p-n');
+        const pInput = document.getElementById('set-p-p');
+        const sInput = document.getElementById('set-p-s');
+        const scInput = document.getElementById('set-p-sc');
+        const btn = document.getElementById('add-prod-btn');
+
+        if(!nInput.value || !pInput.value) return alert("Enter Product and Price");
+
+        db.items.push({ 
+            name: nInput.value, 
+            price: parseFloat(pInput.value), 
+            stock: parseInt(sInput.value) || 0, 
+            scheme: parseInt(scInput.value) || 0 
+        });
+
+        sync();
+        cloudAction('push', true);
+
+        // Clear Inputs
+        nInput.value = ""; pInput.value = ""; sInput.value = ""; scInput.value = "";
+        
+        // Success Message
+        btn.innerText = "✅ SAVED TO CLOUD";
+        btn.classList.replace('btn-green', 'btn-dark');
+        setTimeout(() => {
+            btn.innerText = "ADD PRODUCT";
+            btn.classList.replace('btn-dark', 'btn-green');
+            nInput.focus();
+        }, 1200);
+    }
+
+    function addRoute() {
+        const input = document.getElementById('set-r-n');
+        if(!input.value) return;
+        db.routes.push({ name: input.value, shops: [] });
+        input.value = "";
+        sync();
+        cloudAction('push', true);
+        alert("Route Added");
+    }
+
+    function addShop() {
+        const input = document.getElementById('set-s-n');
+        const rIdx = document.getElementById('set-r-sel').value;
+        if(!input.value) return;
+        db.routes[rIdx].shops.push(input.value);
+        input.value = "";
+        sync();
+        cloudAction('push', true);
+        alert("Shop Added");
+    }
+
+    // BILLING LOGIC
     function openR(idx) {
         document.getElementById('route-sel').style.display = 'none';
         document.getElementById('shop-sel').style.display = 'block';
@@ -189,7 +247,7 @@
     }
 
     function upCart() { 
-        document.getElementById('cart-list').innerHTML = cart.map(c => `<div class="item-row"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`).join('');
+        document.getElementById('cart-list').innerHTML = cart.map((c,i) => `<div class="item-row"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`).join('');
         upTotal();
     }
 
@@ -209,7 +267,7 @@
         db.sales.push({ date: new Date().toISOString().split('T')[0], shop: curS, total: parseFloat(total), html });
         
         sync();
-        cloudAction('push', true); // Hidden auto-push
+        cloudAction('push', true);
         
         document.getElementById('print-data').innerHTML = html;
         document.getElementById('print-overlay').style.display = 'block';
@@ -229,13 +287,6 @@
         document.getElementById('rep-res').innerHTML = `<h3>Day Total: ${sales.reduce((s,x)=>s+x.total,0).toFixed(2)}</h3>` + 
             sales.map(s => `<div class="item-row"><b>${s.shop}</b> <span>${s.total.toFixed(2)}</span></div>`).join('');
     }
-
-    function addItem() { 
-        db.items.push({ name: document.getElementById('set-p-n').value, price: parseFloat(document.getElementById('set-p-p').value), stock: parseInt(document.getElementById('set-p-s').value), scheme: parseInt(document.getElementById('set-p-sc').value) }); 
-        sync(); cloudAction('push', true); 
-    }
-    function addRoute() { db.routes.push({ name: document.getElementById('set-r-n').value, shops: [] }); sync(); cloudAction('push', true); }
-    function addShop() { db.routes[document.getElementById('set-r-sel').value].shops.push(document.getElementById('set-s-n').value); sync(); cloudAction('push', true); }
 
     function refresh() {
         document.getElementById('route-sel').innerHTML = db.routes.map((r,i) => `<button class="btn-blue" style="margin-bottom:10px" onclick="openR(${i})">${r.name}</button>`).join('');
