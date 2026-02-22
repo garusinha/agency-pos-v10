@@ -3,130 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gamirasa Food Product POS V11.0</title>
+    <title>Gamirasa Pre-Order & Delivery V12.0</title>
     <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #f1f5f9; }
+        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #f8fafc; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
-        header { background: var(--primary); color: white; padding: 15px; text-align: center; font-weight: 800; border-bottom: 4px solid var(--accent); letter-spacing: 1px; }
+        header { background: var(--primary); color: white; padding: 15px; text-align: center; font-weight: 800; border-bottom: 4px solid var(--accent); }
         nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
-        .nav-link { flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; font-size: 0.7rem; font-weight: 700; color: #64748b; min-width: 80px; text-transform: uppercase; }
-        .nav-link.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: #f8fafc; }
+        .nav-link { flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; font-size: 0.65rem; font-weight: 700; color: #64748b; min-width: 85px; text-transform: uppercase; }
+        .nav-link.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
         .container { padding: 15px; max-width: 800px; margin: auto; padding-bottom: 100px; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; border: 1px solid #e2e8f0; }
-        .credit-alert { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; text-align: center; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: white; }
-        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; margin-top: 5px; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .summary-card { background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; margin-top: 5px; }
         .btn-blue { background: var(--accent); color: white; }
         .btn-green { background: var(--success); color: white; }
         .btn-dark { background: var(--primary); color: white; }
-        .btn-sm { padding: 6px 12px; font-size: 0.75rem; width: auto; margin: 0; }
-        .item-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; align-items: center; }
+        .btn-sm { padding: 5px 10px; width: auto; font-size: 0.75rem; margin: 2px; }
+        .item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; align-items: center; }
+        .status-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; }
+        .pending { background: #fef9c3; color: #854d0e; }
+        .delivered { background: #dcfce7; color: #166534; }
         #print-overlay { display: none; position: fixed; inset: 0; background: white; z-index: 9999; padding: 20px; overflow-y: auto; }
         iframe { position: absolute; width: 0; height: 0; visibility: hidden; }
-        .badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; background: #e2e8f0; }
     </style>
 </head>
 <body>
 
 <iframe id="print-frame"></iframe>
 
-<div id="login-screen" style="position:fixed; inset:0; background:var(--primary); z-index:10000; display:flex; align-items:center; justify-content:center; flex-direction: column;">
-    <h1 style="color:white; margin-bottom:20px;">GAMIRASA FOOD</h1>
+<div id="login-screen" style="position:fixed; inset:0; background:var(--primary); z-index:10000; display:flex; align-items:center; justify-content:center;">
     <div class="card" style="width:300px; text-align:center;">
-        <p>Enter System PIN</p>
-        <input type="password" id="sys-pin" placeholder="****" style="text-align:center; font-size:2rem;">
-        <button class="btn-blue" onclick="checkPin()">LOGIN</button>
+        <h2>GAMIRASA LOGIN</h2>
+        <input type="password" id="sys-pin" placeholder="PIN" style="text-align:center; font-size:1.5rem;">
+        <button class="btn-blue" onclick="checkPin()">ENTER</button>
     </div>
 </div>
 
 <div id="app-content" style="display:none">
-    <header>GAMIRASA FOOD PRODUCT</header>
+    <header>GAMIRASA FOOD - PRE-ORDER</header>
     <nav>
-        <div class="nav-link active" onclick="showV('pos', this)">Billing</div>
+        <div class="nav-link active" onclick="showV('order', this)">Orders</div>
+        <div class="nav-link" onclick="showV('delivery', this)">Delivery</div>
         <div class="nav-link" onclick="showV('credit', this)">Credits</div>
         <div class="nav-link" onclick="showV('stock', this)">Stock</div>
-        <div class="nav-link" onclick="showV('admin', this)">Reports</div>
-        <div class="nav-link" onclick="showV('setup', this)">Setup 🔒</div>
+        <div class="nav-link" onclick="showV('setup', this)">Setup</div>
     </nav>
 
     <div class="container">
-        <div id="v-pos">
+        <div id="v-order">
             <div id="route-list"></div>
             <div id="shop-list" style="display:none"></div>
-            <div id="bill-ui" style="display:none">
-                <button onclick="showV('pos')" class="btn-dark" style="width:auto; padding:8px 15px; margin-bottom:10px;">← BACK</button>
+            <div id="order-ui" style="display:none">
+                <button onclick="showV('order')" class="btn-dark" style="width:auto; padding:8px 12px; margin-bottom:10px;">← ROUTES</button>
                 <div class="card">
-                    <h2 id="cur-shop" style="margin-top:0;"></h2>
-                    <div id="shop-credit-warning"></div>
-                    <label>Select Product</label>
-                    <select id="i-item" onchange="upFree()"></select>
+                    <h2 id="cur-shop"></h2>
+                    <div id="shop-credit-alert"></div>
+                    <select id="i-item" onchange="autoScheme()"></select>
                     <div style="display:flex; gap:10px">
-                        <input type="number" id="i-qty" value="1" oninput="upFree()" placeholder="Qty">
+                        <input type="number" id="i-qty" value="1" oninput="autoScheme()" placeholder="Qty">
                         <input type="number" id="i-free" value="0" placeholder="Free">
                     </div>
-                    <button class="btn-blue" onclick="addCart()">+ ADD TO BILL</button>
+                    <button class="btn-blue" onclick="addToOrder()">ADD TO ORDER</button>
                 </div>
                 <div class="card">
-                    <h3>Current Bill</h3>
-                    <div id="cart-display"></div>
-                    <div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px;">
-                        <div style="display:flex; justify-content:space-between; font-size:1.4rem; font-weight:900;">
-                            <span>TOTAL:</span><span id="bill-total">0.00</span>
-                        </div>
-                        <label style="color:var(--success); font-weight:bold; margin-top:10px; display:block;">Cash Received</label>
-                        <input type="number" id="i-paid" value="0" oninput="upTotal()" style="border: 2px solid var(--success); font-size:1.2rem;">
-                        <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--danger); margin-top:5px;">
-                            <span>Balance to Credit:</span><span id="bill-credit">0.00</span>
-                        </div>
+                    <div id="order-cart-list"></div>
+                    <div style="text-align:right; font-size:1.4rem; font-weight:800; border-top:2px solid #eee; margin-top:10px; padding-top:10px;">
+                        TOTAL: Rs. <span id="order-total">0.00</span>
                     </div>
-                    <button class="btn-green" onclick="saveBill()" style="margin-top:20px; height:60px; font-size:1.2rem;">FINALIZE & PRINT</button>
+                    <button class="btn-green" onclick="savePreOrder()">CONFIRM PRE-ORDER</button>
                 </div>
             </div>
+        </div>
+
+        <div id="v-delivery" style="display:none">
+            <div class="summary-card">
+                <h3>📦 Truck Load List (Total Items)</h3>
+                <div id="load-summary"></div>
+            </div>
+            <h3>Pending Deliveries</h3>
+            <div id="delivery-pending-list"></div>
         </div>
 
         <div id="v-credit" style="display:none">
-            <div class="card" style="background:var(--primary); color:white;">
-                <p style="margin:0;">Market Total Credit</p>
-                <h2 id="total-market-credit" style="margin:5px 0;">Rs. 0.00</h2>
+            <div class="card" style="background:var(--primary); color:white; text-align:center;">
+                Market Outstanding: <h2 id="grand-credit">Rs. 0.00</h2>
             </div>
-            <div id="credit-display-list"></div>
+            <div id="credit-list-ui"></div>
         </div>
 
-        <div id="v-stock" style="display:none">
-            <div class="card">
-                <h3>Current Inventory</h3>
-                <div id="stock-inventory-list"></div>
-            </div>
-        </div>
-
-        <div id="v-admin" style="display:none">
-            <div class="card">
-                <h3>Daily Sales Report</h3>
-                <input type="date" id="rep-date" onchange="runRep()">
-                <div id="rep-res"></div>
-            </div>
-        </div>
-
+        <div id="v-stock" style="display:none"><div class="card"><h3>Inventory</h3><div id="stock-display"></div></div></div>
         <div id="v-setup" style="display:none">
             <div class="card">
-                <h3>Add New Product</h3>
-                <input type="text" id="set-p-n" placeholder="Product Name">
-                <input type="number" id="set-p-p" placeholder="Selling Price">
-                <input type="number" id="set-p-s" placeholder="Initial Stock">
-                <button class="btn-green" onclick="addItem()">SAVE PRODUCT</button>
-            </div>
-            <div class="card">
-                <h3>Manage Routes & Shops</h3>
-                <input type="text" id="set-r-n" placeholder="Route Name">
-                <button class="btn-blue" onclick="addRoute()">ADD ROUTE</button>
+                <h3>Add Product</h3>
+                <input type="text" id="set-p-n" placeholder="Name">
+                <input type="number" id="set-p-p" placeholder="Price">
+                <input type="number" id="set-p-sc" placeholder="Scheme (e.g. 10 for 10+1)">
+                <input type="number" id="set-p-s" placeholder="Stock">
+                <button class="btn-green" onclick="addItem()">SAVE</button>
                 <hr>
-                <select id="set-r-sel"></select>
-                <input type="text" id="set-s-n" placeholder="Shop Name">
-                <button class="btn-blue" onclick="addShop()">ADD SHOP TO ROUTE</button>
+                <input type="text" id="set-r-n" placeholder="Route"><button class="btn-blue" onclick="addRoute()">ADD ROUTE</button>
+                <hr>
+                <select id="set-r-sel"></select><input type="text" id="set-s-n" placeholder="Shop"><button class="btn-blue" onclick="addShop()">ADD SHOP</button>
             </div>
-            <button class="btn-dark" onclick="cloudAction('pull')">🔄 FORCE CLOUD REFRESH</button>
         </div>
     </div>
 </div>
@@ -134,7 +113,7 @@
 <div id="print-overlay">
     <div id="print-data"></div>
     <div style="display:flex; gap:10px; margin-top:30px;">
-        <button class="btn-green" onclick="doPrint()">CONFIRM PRINT</button>
+        <button class="btn-green" onclick="doPrint()">PRINT</button>
         <button class="btn-dark" onclick="closePrint()">CLOSE</button>
     </div>
 </div>
@@ -143,306 +122,226 @@
     const CLOUD_TOKEN = "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";
     const CLOUD_GIST = "0c3f0cb67d4be33a00862eb3b31e9ecf";
 
-    // Standard Database
-    let db = JSON.parse(localStorage.getItem('pos_v11')) || { 
-        items: [], 
-        routes: [], 
-        sales: [], 
-        nextBill: 1, 
-        settings: { pin: "1234", setupPin: "2705" } 
-    };
-
-    let cart = [];
-    let curS = "";
+    let db = JSON.parse(localStorage.getItem('pos_v12')) || { items: [], routes: [], sales: [], nextBill: 1, settings: { pin: "1234", setupPin: "2705" } };
+    let cart = []; let curS = "";
 
     function checkPin() {
         if(document.getElementById('sys-pin').value === db.settings.pin) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
-            init();
-            cloudAction('pull', true); 
-        } else { alert("Wrong PIN!"); }
+            refresh(); cloudAction('pull', true);
+        } else { alert("Wrong PIN"); }
     }
 
-    function sync() { 
-        localStorage.setItem('pos_v11', JSON.stringify(db)); 
-        refreshUI(); 
-    }
+    function sync() { localStorage.setItem('pos_v12', JSON.stringify(db)); refresh(); }
 
     async function cloudAction(type, silent = false) {
         const headers = { "Authorization": `token ${CLOUD_TOKEN}`, "Content-Type": "application/json" };
         try {
             if(type === 'push') {
-                const body = JSON.stringify({ files: { "pos_v11_db.json": { content: JSON.stringify(db) } } });
+                const body = JSON.stringify({ files: { "pos_v12_db.json": { content: JSON.stringify(db) } } });
                 await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { method: "PATCH", headers, body });
             } else {
                 const res = await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { headers });
                 const data = await res.json();
-                if(data.files && data.files["pos_v11_db.json"]) {
-                    db = JSON.parse(data.files["pos_v11_db.json"].content);
-                    sync();
-                }
+                if(data.files && data.files["pos_v12_db.json"]) { db = JSON.parse(data.files["pos_v12_db.json"].content); sync(); }
             }
-        } catch(e) { console.error("Sync Error", e); }
+        } catch(e) { console.error(e); }
     }
 
     function showV(id, el) {
         if(id === 'setup') {
-            const p = prompt("Enter Setup Password:");
-            if(p !== db.settings.setupPin) { alert("Access Denied"); return; }
+            if(prompt("Setup Password:") !== db.settings.setupPin) return;
         }
-        
-        ['v-pos', 'v-stock', 'v-admin', 'v-setup', 'v-credit'].forEach(v => document.getElementById(v).style.display = 'none');
+        ['v-order', 'v-delivery', 'v-credit', 'v-stock', 'v-setup'].forEach(v => document.getElementById(v).style.display = 'none');
         document.getElementById('v-' + id).style.display = 'block';
-        if(el) { 
-            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active')); 
-            el.classList.add('active'); 
-        }
-        if(id === 'pos') { 
-            document.getElementById('route-list').style.display = 'block'; 
-            document.getElementById('shop-list').style.display = 'none'; 
-            document.getElementById('bill-ui').style.display = 'none'; 
-        }
-        if(id === 'credit') renderCreditTab();
-        if(id === 'stock') renderStockTab();
+        if(el) { document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
+        if(id === 'order') { document.getElementById('route-list').style.display = 'block'; document.getElementById('shop-list').style.display = 'none'; document.getElementById('order-ui').style.display = 'none'; }
+        if(id === 'delivery') renderDelivery();
+        if(id === 'credit') renderCredit();
     }
 
-    // --- SETUP FUNCTIONS ---
-    function addItem() {
-        const n = document.getElementById('set-p-n').value;
-        const p = document.getElementById('set-p-p').value;
-        const s = document.getElementById('set-p-s').value;
-        if(!n || !p) return alert("Fill details");
-        db.items.push({ name: n, price: parseFloat(p), stock: parseInt(s)||0 });
-        sync(); cloudAction('push', true);
-        alert("Product Added!");
-    }
-
-    function addRoute() {
-        const n = document.getElementById('set-r-n').value;
-        if(!n) return;
-        db.routes.push({ name: n, shops: [] });
-        sync(); cloudAction('push', true);
-        document.getElementById('set-r-n').value = "";
-    }
-
-    function addShop() {
-        const rIdx = document.getElementById('set-r-sel').value;
-        const sName = document.getElementById('set-s-n').value;
-        if(!sName) return;
-        db.routes[rIdx].shops.push(sName);
-        sync(); cloudAction('push', true);
-        document.getElementById('set-s-n').value = "";
-    }
-
-    // --- BILLING FUNCTIONS ---
-    function openRoute(idx) {
+    // --- ORDER LOGIC ---
+    function openR(idx) {
         document.getElementById('route-list').style.display = 'none';
         document.getElementById('shop-list').style.display = 'block';
-        let html = `<h3>Select Shop</h3>`;
-        db.routes[idx].shops.forEach(s => {
-            html += `<button class="card" style="text-align:left; font-size:1.1rem" onclick="startBill('${s}')">${s}</button>`;
-        });
-        html += `<button class="btn-dark" onclick="showV('pos')">BACK</button>`;
-        document.getElementById('shop-list').innerHTML = html;
+        let h = `<h3>${db.routes[idx].name}</h3>`;
+        db.routes[idx].shops.forEach(s => { h += `<button class="card" onclick="startOrder('${s}')">${s}</button>`; });
+        h += `<button class="btn-dark" onclick="showV('order')">BACK</button>`;
+        document.getElementById('shop-list').innerHTML = h;
     }
 
-    function startBill(shopName) {
-        curS = shopName; cart = [];
+    function startOrder(shop) {
+        curS = shop; cart = [];
         document.getElementById('shop-list').style.display = 'none';
-        document.getElementById('bill-ui').style.display = 'block';
-        document.getElementById('cur-shop').innerText = shopName;
-        
-        // Show Previous Credit warning
-        const totalCredit = db.sales.filter(s => s.shop === shopName).reduce((a,b) => a + (b.total - (b.paid||0)), 0);
-        const warn = document.getElementById('shop-credit-warning');
-        warn.innerHTML = totalCredit > 0 ? `<div class="credit-alert">⚠️ PREVIOUS CREDIT: RS. ${totalCredit.toFixed(2)}</div>` : "";
-        
-        document.getElementById('i-paid').value = 0;
-        updateCartUI();
+        document.getElementById('order-ui').style.display = 'block';
+        document.getElementById('cur-shop').innerText = shop;
+        const cred = db.sales.filter(s => s.shop === shop).reduce((a, b) => a + (b.total - (b.paid||0)), 0);
+        document.getElementById('shop-credit-alert').innerHTML = cred > 0 ? `<div style="color:red; font-weight:bold; margin-bottom:10px;">⚠️ PREV CREDIT: Rs.${cred.toFixed(2)}</div>` : "";
+        upCart();
     }
 
-    function upFree() {
-        const select = document.getElementById('i-item');
-        const item = db.items[select.value];
-        if(!item) return;
-        // Default free logic if needed
-    }
-
-    function addCart() {
-        const idx = document.getElementById('i-item').value;
-        if(idx === "") return;
+    function autoScheme() {
+        const item = db.items[document.getElementById('i-item').value];
         const qty = parseInt(document.getElementById('i-qty').value);
-        const free = parseInt(document.getElementById('i-free').value) || 0;
+        if(item && item.scheme > 0) {
+            document.getElementById('i-free').value = Math.floor(qty / item.scheme);
+        } else { document.getElementById('i-free').value = 0; }
+    }
+
+    function addToOrder() {
+        const idx = document.getElementById('i-item').value;
+        if(!idx) return;
         const item = db.items[idx];
-        cart.push({ ...item, qty, free, dbIdx: idx });
-        updateCartUI();
+        cart.push({ ...item, qty: parseInt(document.getElementById('i-qty').value), free: parseInt(document.getElementById('i-free').value), dbIdx: idx });
+        upCart();
     }
 
-    function updateCartUI() {
-        const display = document.getElementById('cart-display');
-        display.innerHTML = cart.map((c, i) => `
-            <div class="item-row">
-                <span>${c.name} x ${c.qty} <small>(Free: ${c.free})</small></span>
-                <span>${(c.price * c.qty).toFixed(2)}</span>
-            </div>
-        `).join('');
-        upTotal();
+    function upCart() {
+        let total = 0;
+        document.getElementById('order-cart-list').innerHTML = cart.map(c => {
+            total += (c.price * c.qty);
+            return `<div class="item-row"><span>${c.name} x${c.qty} (F:${c.free})</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`;
+        }).join('');
+        document.getElementById('order-total').innerText = total.toFixed(2);
     }
 
-    function upTotal() {
-        const sub = cart.reduce((s, c) => s + (c.price * c.qty), 0);
-        const paid = parseFloat(document.getElementById('i-paid').value) || 0;
-        document.getElementById('bill-total').innerText = sub.toFixed(2);
-        document.getElementById('bill-credit').innerText = (sub - paid).toFixed(2);
-    }
-
-    function saveBill() {
-        if(cart.length === 0) return;
-        const total = parseFloat(document.getElementById('bill-total').innerText);
-        const paid = parseFloat(document.getElementById('i-paid').value) || 0;
-        const bNo = "NIK-" + String(db.nextBill).padStart(4, '0');
-        
-        const billData = {
-            billNo: bNo,
-            date: new Date().toISOString().split('T')[0],
-            time: new Date().toLocaleTimeString(),
+    function savePreOrder() {
+        if(!cart.length) return;
+        const order = {
+            id: Date.now(),
+            billNo: "ORD-" + String(db.nextBill).padStart(4, '0'),
             shop: curS,
             items: [...cart],
-            total: total,
-            paid: paid
+            total: parseFloat(document.getElementById('order-total').innerText),
+            status: 'pending',
+            date: new Date().toLocaleDateString()
         };
-
-        // Update Stock
-        cart.forEach(c => { db.items[c.dbIdx].stock -= (c.qty + c.free); });
-        
-        db.sales.push(billData);
+        db.sales.push(order);
         db.nextBill++;
-        sync();
-        cloudAction('push', true);
+        sync(); cloudAction('push', true);
+        alert("Pre-Order Saved Successfully!");
+        showV('order');
+    }
+
+    // --- DELIVERY LOGIC ---
+    function renderDelivery() {
+        const pending = db.sales.filter(s => s.status === 'pending');
         
-        renderPrint(billData);
+        // Load List Summary
+        const summary = {};
+        pending.forEach(ord => {
+            ord.items.forEach(it => {
+                if(!summary[it.name]) summary[it.name] = { qty: 0, free: 0 };
+                summary[it.name].qty += it.qty;
+                summary[it.name].free += it.free;
+            });
+        });
+
+        let sH = "";
+        for(let name in summary) {
+            sH += `<div class="item-row"><span>${name}</span><b>Sell: ${summary[name].qty} | Free: ${summary[name].free}</b></div>`;
+        }
+        document.getElementById('load-summary').innerHTML = sH || "No items to load.";
+
+        // Pending List
+        document.getElementById('delivery-pending-list').innerHTML = pending.map((s, idx) => `
+            <div class="card">
+                <div style="display:flex; justify-content:space-between">
+                    <b>${s.shop}</b> <span class="status-badge pending">PENDING</span>
+                </div>
+                <div style="font-size:0.8rem; margin:5px 0;">Total: Rs.${s.total.toFixed(2)} | Items: ${s.items.length}</div>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-green btn-sm" onclick="finalizeDelivery(${s.id}, 'cash')">CASH PAID</button>
+                    <button class="btn-dark btn-sm" onclick="finalizeDelivery(${s.id}, 'credit')">CREDIT</button>
+                    <button class="btn-blue btn-sm" onclick="printOrder(${s.id})">VIEW</button>
+                </div>
+            </div>
+        `).join('');
     }
 
-    function renderPrint(b) {
-        const html = `
-            <div style="font-family:monospace; text-align:center; font-size:12px; color:black;">
-                <b style="font-size:16px;">Gamirasa Food Product Pvt Ltd</b><br>
-                No 5379, Yaya 01, Aliolu Ara, Sooriyawewa<br>
-                Tel: 0701242299<br>
-                --------------------------------<br>
-                <b>INVOICE: ${b.billNo}</b><br>
-                Date: ${b.date} ${b.time}<br>
-                Shop: ${b.shop}<br>
-                --------------------------------<br>
-                <div style="text-align:left">
-                ${b.items.map(i => `<div style="display:flex; justify-content:space-between"><span>${i.name} x${i.qty}</span><span>${(i.price*i.qty).toFixed(2)}</span></div>`).join('')}
-                </div>
-                --------------------------------<br>
-                <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                    <span>NET TOTAL:</span><span>RS. ${b.total.toFixed(2)}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span>CASH PAID:</span><span>RS. ${b.paid.toFixed(2)}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; color:red;">
-                    <span>CREDIT BAL:</span><span>RS. ${(b.total - b.paid).toFixed(2)}</span>
-                </div>
-                --------------------------------<br>
-                Thank You! Come Again.
-            </div>`;
-        document.getElementById('print-data').innerHTML = html;
-        document.getElementById('print-overlay').style.display = 'block';
+    function finalizeDelivery(id, type) {
+        const s = db.sales.find(x => x.id === id);
+        if(type === 'cash') s.paid = s.total;
+        else s.paid = 0;
+        s.status = 'delivered';
+        
+        // Deduct from Stock only now
+        s.items.forEach(c => {
+            const dbIt = db.items.find(di => di.name === c.name);
+            if(dbIt) dbIt.stock -= (c.qty + c.free);
+        });
+        
+        sync(); cloudAction('push', true);
+        renderDelivery();
+        alert("Delivery Confirmed as " + type.toUpperCase());
     }
 
-    // --- CREDIT TAB FUNCTIONS ---
-    function renderCreditTab() {
-        const shops = {};
+    // --- CREDIT LOGIC ---
+    function renderCredit() {
+        const credits = {};
         let grand = 0;
-        db.sales.forEach((s, idx) => {
+        db.sales.forEach(s => {
             const bal = s.total - (s.paid || 0);
-            if(bal > 0.01) {
-                if(!shops[s.shop]) shops[s.shop] = [];
-                shops[s.shop].push({ ...s, dbIdx: idx, bal });
+            if(s.status === 'delivered' && bal > 0) {
+                if(!credits[s.shop]) credits[s.shop] = [];
+                credits[s.shop].push(s);
                 grand += bal;
             }
         });
-
-        document.getElementById('total-market-credit').innerText = "Rs. " + grand.toFixed(2);
-        let html = "";
-        for(let name in shops) {
-            html += `<div class="card">
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:5px;">
-                    <b>${name}</b>
-                    <b style="color:var(--danger)">Rs. ${shops[name].reduce((a,b)=>a+b.bal,0).toFixed(2)}</b>
-                </div>`;
-            shops[name].forEach(bill => {
-                html += `<div class="item-row" style="font-size:0.8rem">
-                    <span>${bill.date} (${bill.billNo})</span>
-                    <span>Rs.${bill.bal.toFixed(2)} <button class="btn-blue btn-sm" onclick="settleOne(${bill.dbIdx})">SETTLE</button></span>
-                </div>`;
-            });
-            html += `</div>`;
-        }
-        document.getElementById('credit-display-list').innerHTML = html || "<center>No Credit Balance</center>";
-    }
-
-    function settleOne(idx) {
-        const bill = db.sales[idx];
-        const due = bill.total - (bill.paid || 0);
-        const amt = prompt(`Paying for ${bill.billNo}. Amount:`, due.toFixed(2));
-        if(!amt || isNaN(amt)) return;
-        db.sales[idx].paid += parseFloat(amt);
-        sync(); cloudAction('push', true); renderCreditTab();
-    }
-
-    // --- UTILS ---
-    function renderStockTab() {
-        document.getElementById('stock-inventory-list').innerHTML = db.items.map(i => `
-            <div class="item-row">
-                <span>${i.name}</span>
-                <b style="color:${i.stock < 10 ? 'red' : 'green'}">${i.stock}</b>
+        document.getElementById('grand-credit').innerText = "Rs. " + grand.toFixed(2);
+        document.getElementById('credit-list-ui').innerHTML = Object.keys(credits).map(shop => `
+            <div class="card">
+                <b>${shop}</b>
+                ${credits[shop].map(b => `
+                    <div class="item-row" style="font-size:0.8rem">
+                        <span>${b.date} (${b.billNo})</span>
+                        <span>Rs.${(b.total - b.paid).toFixed(2)} <button class="btn-blue btn-sm" onclick="settle(${b.id})">SETTLE</button></span>
+                    </div>
+                `).join('')}
             </div>
         `).join('');
     }
 
-    function runRep() {
-        const d = document.getElementById('rep-date').value;
-        const daily = db.sales.filter(s => s.date === d);
-        const cash = daily.reduce((a, b) => a + b.paid, 0);
-        const sales = daily.reduce((a, b) => a + b.total, 0);
-        document.getElementById('rep-res').innerHTML = `
-            <div style="margin-top:15px; background:#f8fafc; padding:10px; border-radius:8px;">
-                <p>Total Sales: <b>Rs.${sales.toFixed(2)}</b></p>
-                <p>Cash Collected: <b>Rs.${cash.toFixed(2)}</b></p>
-                <p>Credit Given: <b>Rs.${(sales-cash).toFixed(2)}</b></p>
-            </div>
-        ` + daily.map(s => `<div class="item-row"><span>${s.shop}</span><span>${s.total.toFixed(2)}</span></div>`).join('');
+    function settle(id) {
+        const s = db.sales.find(x => x.id === id);
+        const amt = prompt("Amount Paid:", (s.total - s.paid).toFixed(2));
+        if(!amt) return;
+        s.paid += parseFloat(amt);
+        sync(); cloudAction('push', true); renderCredit();
     }
 
-    function refreshUI() {
-        // Refresh Route List
-        document.getElementById('route-list').innerHTML = db.routes.map((r, i) => `
-            <button class="btn-blue" style="margin-bottom:10px; height:60px; font-size:1.1rem" onclick="openRoute(${i})">${r.name}</button>
-        `).join('');
-        
-        // Refresh Item Dropdown
-        document.getElementById('i-item').innerHTML = `<option value="">-- Select Product --</option>` + 
-            db.items.map((it, i) => `<option value="${i}">${it.name} (Rs.${it.price})</option>`).join('');
-            
-        // Refresh Setup Route Select
+    // --- CORE REFRESH & SETUP ---
+    function refresh() {
+        document.getElementById('route-list').innerHTML = db.routes.map((r, i) => `<button class="btn-blue" style="margin-bottom:10px" onclick="openR(${i})">${r.name}</button>`).join('');
+        document.getElementById('i-item').innerHTML = `<option value="">Select Item</option>` + db.items.map((it, i) => `<option value="${i}">${it.name} (Rs.${it.price})</option>`).join('');
         document.getElementById('set-r-sel').innerHTML = db.routes.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
+        document.getElementById('stock-display').innerHTML = db.items.map(i => `<div class="item-row"><span>${i.name}</span><b>${i.stock}</b></div>`).join('');
     }
 
-    function init() { refreshUI(); }
-    function doPrint() {
-        const frame = document.getElementById('print-frame');
-        const doc = frame.contentWindow.document;
-        doc.open(); doc.write('<html><body style="margin:0;">' + document.getElementById('print-data').innerHTML + '</body></html>'); doc.close();
-        setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); }, 500);
+    function addItem() {
+        const n = document.getElementById('set-p-n').value, p = document.getElementById('set-p-p').value, sc = document.getElementById('set-p-sc').value, s = document.getElementById('set-p-s').value;
+        db.items.push({ name: n, price: parseFloat(p), scheme: parseInt(sc)||0, stock: parseInt(s)||0 });
+        sync(); cloudAction('push', true);
     }
-    function closePrint() { document.getElementById('print-overlay').style.display = 'none'; showV('pos'); }
+    function addRoute() { db.routes.push({ name: document.getElementById('set-r-n').value, shops: [] }); sync(); cloudAction('push', true); }
+    function addShop() { db.routes[document.getElementById('set-r-sel').value].shops.push(document.getElementById('set-s-n').value); sync(); cloudAction('push', true); }
 
+    function printOrder(id) {
+        const s = db.sales.find(x => x.id === id);
+        const h = `<div style="font-family:monospace; text-align:center;">
+            <h3>Gamirasa Delivery Note</h3>
+            <b>Shop: ${s.shop}</b><br>Bill No: ${s.billNo}<br>
+            --------------------------------<br>
+            ${s.items.map(i => `<div style="display:flex; justify-content:space-between"><span>${i.name} x${i.qty}</span><span>${(i.price*i.qty).toFixed(2)}</span></div>`).join('')}
+            --------------------------------<br>
+            <b>TOTAL: RS. ${s.total.toFixed(2)}</b>
+        </div>`;
+        document.getElementById('print-data').innerHTML = h;
+        document.getElementById('print-overlay').style.display = 'block';
+    }
+    function doPrint() { const f = document.getElementById('print-frame'); const d = f.contentWindow.document; d.open(); d.write(document.getElementById('print-data').innerHTML); d.close(); f.contentWindow.print(); }
+    function closePrint() { document.getElementById('print-overlay').style.display = 'none'; }
 </script>
 </body>
 </html>
