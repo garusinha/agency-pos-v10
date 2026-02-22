@@ -3,60 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gamirasa POS V10.9 - Bill Settlement</title>
+    <title>Gamirasa Food Product POS V11.0</title>
     <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #f8fafc; }
+        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #ef4444; --bg: #f1f5f9; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: #1e293b; }
-        header { background: var(--primary); color: white; padding: 15px; text-align: center; font-weight: 800; border-bottom: 4px solid var(--accent); }
+        header { background: var(--primary); color: white; padding: 15px; text-align: center; font-weight: 800; border-bottom: 4px solid var(--accent); letter-spacing: 1px; }
         nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
-        .nav-link { flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; font-size: 0.65rem; font-weight: 700; color: #64748b; min-width: 70px; }
-        .nav-link.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
+        .nav-link { flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; font-size: 0.7rem; font-weight: 700; color: #64748b; min-width: 80px; text-transform: uppercase; }
+        .nav-link.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: #f8fafc; }
         .container { padding: 15px; max-width: 800px; margin: auto; padding-bottom: 100px; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2e8f0; }
-        .credit-alert { background: #fef2f2; border: 1px solid #fee2e2; color: #b91c1c; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-weight: bold; text-align: center; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; margin-top: 5px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .credit-alert { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; text-align: center; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: white; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; margin-top: 5px; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
         .btn-blue { background: var(--accent); color: white; }
         .btn-green { background: var(--success); color: white; }
         .btn-dark { background: var(--primary); color: white; }
-        .btn-sm { padding: 5px 10px; font-size: 0.7rem; width: auto; margin: 0; }
-        .item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; align-items: center; }
+        .btn-sm { padding: 6px 12px; font-size: 0.75rem; width: auto; margin: 0; }
+        .item-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; align-items: center; }
         #print-overlay { display: none; position: fixed; inset: 0; background: white; z-index: 9999; padding: 20px; overflow-y: auto; }
         iframe { position: absolute; width: 0; height: 0; visibility: hidden; }
+        .badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; background: #e2e8f0; }
     </style>
 </head>
 <body>
 
 <iframe id="print-frame"></iframe>
 
-<div id="login-screen" style="position:fixed; inset:0; background:var(--primary); z-index:10000; display:flex; align-items:center; justify-content:center;">
+<div id="login-screen" style="position:fixed; inset:0; background:var(--primary); z-index:10000; display:flex; align-items:center; justify-content:center; flex-direction: column;">
+    <h1 style="color:white; margin-bottom:20px;">GAMIRASA FOOD</h1>
     <div class="card" style="width:300px; text-align:center;">
-        <h2>GAMIRASA POS</h2>
-        <input type="password" id="sys-pin" placeholder="PIN" style="text-align:center; font-size:1.5rem;">
-        <button class="btn-blue" onclick="checkPin()">UNLOCK</button>
+        <p>Enter System PIN</p>
+        <input type="password" id="sys-pin" placeholder="****" style="text-align:center; font-size:2rem;">
+        <button class="btn-blue" onclick="checkPin()">LOGIN</button>
     </div>
 </div>
 
 <div id="app-content" style="display:none">
     <header>GAMIRASA FOOD PRODUCT</header>
     <nav>
-        <div class="nav-link active" onclick="showV('pos', this)">BILLING</div>
-        <div class="nav-link" onclick="showV('credit', this)">CREDITS</div>
-        <div class="nav-link" onclick="showV('stock', this)">STOCKS</div>
-        <div class="nav-link" onclick="showV('admin', this)">REPORTS</div>
-        <div class="nav-link" onclick="showV('setup', this)">SETUP</div>
+        <div class="nav-link active" onclick="showV('pos', this)">Billing</div>
+        <div class="nav-link" onclick="showV('credit', this)">Credits</div>
+        <div class="nav-link" onclick="showV('stock', this)">Stock</div>
+        <div class="nav-link" onclick="showV('admin', this)">Reports</div>
+        <div class="nav-link" onclick="showV('setup', this)">Setup 🔒</div>
     </nav>
 
     <div class="container">
         <div id="v-pos">
-            <div id="route-sel"></div>
-            <div id="shop-sel" style="display:none"></div>
+            <div id="route-list"></div>
+            <div id="shop-list" style="display:none"></div>
             <div id="bill-ui" style="display:none">
-                <button onclick="showV('pos')" class="btn-dark" style="width:auto; padding:8px 15px">← ROUTES</button>
-                <h2 id="cur-shop" style="margin-bottom:5px;"></h2>
-                <div id="shop-credit-warning"></div>
-                
+                <button onclick="showV('pos')" class="btn-dark" style="width:auto; padding:8px 15px; margin-bottom:10px;">← BACK</button>
                 <div class="card">
+                    <h2 id="cur-shop" style="margin-top:0;"></h2>
+                    <div id="shop-credit-warning"></div>
+                    <label>Select Product</label>
                     <select id="i-item" onchange="upFree()"></select>
                     <div style="display:flex; gap:10px">
                         <input type="number" id="i-qty" value="1" oninput="upFree()" placeholder="Qty">
@@ -65,37 +69,72 @@
                     <button class="btn-blue" onclick="addCart()">+ ADD TO BILL</button>
                 </div>
                 <div class="card">
-                    <div id="cart-list"></div>
-                    <div style="margin-top:10px; border-top:2px solid #eee; padding-top:10px;">
-                        <div style="display:flex; justify-content:space-between; font-size:1.3rem; font-weight:800;">
+                    <h3>Current Bill</h3>
+                    <div id="cart-display"></div>
+                    <div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px;">
+                        <div style="display:flex; justify-content:space-between; font-size:1.4rem; font-weight:900;">
                             <span>TOTAL:</span><span id="bill-total">0.00</span>
                         </div>
-                        <label style="color:var(--success);">Cash Paid</label>
-                        <input type="number" id="i-paid" value="0" oninput="upTotal()" style="border: 2px solid var(--success)">
-                        <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--danger)">
-                            <span>Current Credit:</span><span id="bill-credit">0.00</span>
+                        <label style="color:var(--success); font-weight:bold; margin-top:10px; display:block;">Cash Received</label>
+                        <input type="number" id="i-paid" value="0" oninput="upTotal()" style="border: 2px solid var(--success); font-size:1.2rem;">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--danger); margin-top:5px;">
+                            <span>Balance to Credit:</span><span id="bill-credit">0.00</span>
                         </div>
                     </div>
-                    <button class="btn-green" onclick="saveBill()">FINALIZE & PRINT</button>
+                    <button class="btn-green" onclick="saveBill()" style="margin-top:20px; height:60px; font-size:1.2rem;">FINALIZE & PRINT</button>
                 </div>
             </div>
         </div>
 
         <div id="v-credit" style="display:none">
-            <h3>Credit Settlements</h3>
-            <div id="credit-list"></div>
+            <div class="card" style="background:var(--primary); color:white;">
+                <p style="margin:0;">Market Total Credit</p>
+                <h2 id="total-market-credit" style="margin:5px 0;">Rs. 0.00</h2>
+            </div>
+            <div id="credit-display-list"></div>
         </div>
 
-        <div id="v-stock" style="display:none"><div class="card"><h3>Stocks</h3><div id="stock-list"></div></div></div>
-        <div id="v-admin" style="display:none"><div class="card"><input type="date" id="rep-date" onchange="runRep()"><div id="rep-res"></div></div></div>
-        <div id="v-setup" style="display:none"><div class="card"><h3>System Setup</h3><button class="btn-blue" onclick="cloudAction('pull')">REFRESH CLOUD</button><hr><input type="text" id="set-p-n" placeholder="Product Name"><input type="number" id="set-p-p" placeholder="Price"><input type="number" id="set-p-s" placeholder="Stock"><button class="btn-green" onclick="addItem()">ADD PRODUCT</button></div></div>
+        <div id="v-stock" style="display:none">
+            <div class="card">
+                <h3>Current Inventory</h3>
+                <div id="stock-inventory-list"></div>
+            </div>
+        </div>
+
+        <div id="v-admin" style="display:none">
+            <div class="card">
+                <h3>Daily Sales Report</h3>
+                <input type="date" id="rep-date" onchange="runRep()">
+                <div id="rep-res"></div>
+            </div>
+        </div>
+
+        <div id="v-setup" style="display:none">
+            <div class="card">
+                <h3>Add New Product</h3>
+                <input type="text" id="set-p-n" placeholder="Product Name">
+                <input type="number" id="set-p-p" placeholder="Selling Price">
+                <input type="number" id="set-p-s" placeholder="Initial Stock">
+                <button class="btn-green" onclick="addItem()">SAVE PRODUCT</button>
+            </div>
+            <div class="card">
+                <h3>Manage Routes & Shops</h3>
+                <input type="text" id="set-r-n" placeholder="Route Name">
+                <button class="btn-blue" onclick="addRoute()">ADD ROUTE</button>
+                <hr>
+                <select id="set-r-sel"></select>
+                <input type="text" id="set-s-n" placeholder="Shop Name">
+                <button class="btn-blue" onclick="addShop()">ADD SHOP TO ROUTE</button>
+            </div>
+            <button class="btn-dark" onclick="cloudAction('pull')">🔄 FORCE CLOUD REFRESH</button>
+        </div>
     </div>
 </div>
 
 <div id="print-overlay">
     <div id="print-data"></div>
     <div style="display:flex; gap:10px; margin-top:30px;">
-        <button class="btn-green" onclick="doPrint()">PRINT</button>
+        <button class="btn-green" onclick="doPrint()">CONFIRM PRINT</button>
         <button class="btn-dark" onclick="closePrint()">CLOSE</button>
     </div>
 </div>
@@ -104,131 +143,298 @@
     const CLOUD_TOKEN = "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";
     const CLOUD_GIST = "0c3f0cb67d4be33a00862eb3b31e9ecf";
 
-    let db = JSON.parse(localStorage.getItem('pos_v10')) || { items: [], routes: [], sales: [], nextBill: 1, settings: { pin: "1234" } };
-    let cart = []; let curS = "";
+    // Standard Database
+    let db = JSON.parse(localStorage.getItem('pos_v11')) || { 
+        items: [], 
+        routes: [], 
+        sales: [], 
+        nextBill: 1, 
+        settings: { pin: "1234", setupPin: "2705" } 
+    };
+
+    let cart = [];
+    let curS = "";
 
     function checkPin() {
         if(document.getElementById('sys-pin').value === db.settings.pin) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
-            refresh(); cloudAction('pull', true); 
-        } else { alert("Incorrect PIN"); }
+            init();
+            cloudAction('pull', true); 
+        } else { alert("Wrong PIN!"); }
     }
 
-    function sync() { localStorage.setItem('pos_v10', JSON.stringify(db)); refresh(); }
+    function sync() { 
+        localStorage.setItem('pos_v11', JSON.stringify(db)); 
+        refreshUI(); 
+    }
 
     async function cloudAction(type, silent = false) {
         const headers = { "Authorization": `token ${CLOUD_TOKEN}`, "Content-Type": "application/json" };
         try {
             if(type === 'push') {
-                const body = JSON.stringify({ files: { "pos_v10_db.json": { content: JSON.stringify(db) } } });
+                const body = JSON.stringify({ files: { "pos_v11_db.json": { content: JSON.stringify(db) } } });
                 await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { method: "PATCH", headers, body });
             } else {
                 const res = await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, { headers });
                 const data = await res.json();
-                if(data.files) { db = JSON.parse(data.files["pos_v10_db.json"].content); sync(); }
+                if(data.files && data.files["pos_v11_db.json"]) {
+                    db = JSON.parse(data.files["pos_v11_db.json"].content);
+                    sync();
+                }
             }
-        } catch(e) { console.error(e); }
+        } catch(e) { console.error("Sync Error", e); }
     }
 
     function showV(id, el) {
+        if(id === 'setup') {
+            const p = prompt("Enter Setup Password:");
+            if(p !== db.settings.setupPin) { alert("Access Denied"); return; }
+        }
+        
         ['v-pos', 'v-stock', 'v-admin', 'v-setup', 'v-credit'].forEach(v => document.getElementById(v).style.display = 'none');
         document.getElementById('v-' + id).style.display = 'block';
-        if(el) { document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
-        if(id === 'pos') { document.getElementById('route-sel').style.display = 'block'; document.getElementById('shop-sel').style.display = 'none'; document.getElementById('bill-ui').style.display = 'none'; }
-        if(id === 'credit') renderCredits();
-    }
-
-    // UPDATED CREDIT UI
-    function renderCredits() {
-        const shops = {};
-        db.sales.forEach((s, idx) => {
-            const due = s.total - (s.paid || 0);
-            if(due > 0.01) {
-                if(!shops[s.shop]) shops[s.shop] = [];
-                shops[s.shop].push({ ...s, dbIndex: idx, due: due });
-            }
-        });
-
-        let html = "";
-        for(let shop in shops) {
-            let shopTotal = shops[shop].reduce((a, b) => a + b.due, 0);
-            html += `<div class="card">
-                <div style="background:#f8fafc; padding:5px; border-radius:5px; margin-bottom:10px; display:flex; justify-content:space-between;">
-                    <b>${shop}</b> <b style="color:var(--danger)">Total: Rs.${shopTotal.toFixed(2)}</b>
-                </div>`;
-            shops[shop].forEach(bill => {
-                html += `<div class="item-row" style="font-size:0.85rem;">
-                    <span>${bill.date} (${bill.billNo})</span>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <b>Rs.${bill.due.toFixed(2)}</b>
-                        <button class="btn-blue btn-sm" onclick="settleBill(${bill.dbIndex})">SETTLE</button>
-                    </div>
-                </div>`;
-            });
-            html += `</div>`;
+        if(el) { 
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active')); 
+            el.classList.add('active'); 
         }
-        document.getElementById('credit-list').innerHTML = html || "<center>No Credits Pending</center>";
+        if(id === 'pos') { 
+            document.getElementById('route-list').style.display = 'block'; 
+            document.getElementById('shop-list').style.display = 'none'; 
+            document.getElementById('bill-ui').style.display = 'none'; 
+        }
+        if(id === 'credit') renderCreditTab();
+        if(id === 'stock') renderStockTab();
     }
 
-    function settleBill(idx) {
-        const s = db.sales[idx];
-        const due = s.total - (s.paid || 0);
-        const amt = prompt(`Settling Bill ${s.billNo}. Enter amount paid (Max ${due.toFixed(2)}):`, due.toFixed(2));
-        if(!amt || isNaN(amt) || amt <= 0) return;
-        
-        db.sales[idx].paid = (db.sales[idx].paid || 0) + parseFloat(amt);
-        sync(); cloudAction('push', true); renderCredits();
+    // --- SETUP FUNCTIONS ---
+    function addItem() {
+        const n = document.getElementById('set-p-n').value;
+        const p = document.getElementById('set-p-p').value;
+        const s = document.getElementById('set-p-s').value;
+        if(!n || !p) return alert("Fill details");
+        db.items.push({ name: n, price: parseFloat(p), stock: parseInt(s)||0 });
+        sync(); cloudAction('push', true);
+        alert("Product Added!");
     }
 
-    // BILLING LOGIC WITH CREDIT CHECK
-    function openR(idx) {
-        document.getElementById('route-sel').style.display = 'none';
-        document.getElementById('shop-sel').style.display = 'block';
-        document.getElementById('shop-sel').innerHTML = db.routes[idx].shops.map(s => `<button class="card" onclick="openB('${s}')">${s}</button>`).join('') + `<button class="btn-dark" onclick="showV('pos')">BACK</button>`;
+    function addRoute() {
+        const n = document.getElementById('set-r-n').value;
+        if(!n) return;
+        db.routes.push({ name: n, shops: [] });
+        sync(); cloudAction('push', true);
+        document.getElementById('set-r-n').value = "";
     }
 
-    function openB(s) {
-        curS = s; cart = [];
-        document.getElementById('shop-sel').style.display = 'none';
+    function addShop() {
+        const rIdx = document.getElementById('set-r-sel').value;
+        const sName = document.getElementById('set-s-n').value;
+        if(!sName) return;
+        db.routes[rIdx].shops.push(sName);
+        sync(); cloudAction('push', true);
+        document.getElementById('set-s-n').value = "";
+    }
+
+    // --- BILLING FUNCTIONS ---
+    function openRoute(idx) {
+        document.getElementById('route-list').style.display = 'none';
+        document.getElementById('shop-list').style.display = 'block';
+        let html = `<h3>Select Shop</h3>`;
+        db.routes[idx].shops.forEach(s => {
+            html += `<button class="card" style="text-align:left; font-size:1.1rem" onclick="startBill('${s}')">${s}</button>`;
+        });
+        html += `<button class="btn-dark" onclick="showV('pos')">BACK</button>`;
+        document.getElementById('shop-list').innerHTML = html;
+    }
+
+    function startBill(shopName) {
+        curS = shopName; cart = [];
+        document.getElementById('shop-list').style.display = 'none';
         document.getElementById('bill-ui').style.display = 'block';
-        document.getElementById('cur-shop').innerText = s;
+        document.getElementById('cur-shop').innerText = shopName;
         
-        // Check for Previous Credit
-        const prevCredit = db.sales.filter(x => x.shop === s).reduce((a, b) => a + (b.total - (b.paid || 0)), 0);
-        const warnBox = document.getElementById('shop-credit-warning');
-        if(prevCredit > 0.1) {
-            warnBox.innerHTML = `<div class="credit-alert">⚠️ PREVIOUS CREDIT: RS. ${prevCredit.toFixed(2)}</div>`;
-        } else { warnBox.innerHTML = ""; }
+        // Show Previous Credit warning
+        const totalCredit = db.sales.filter(s => s.shop === shopName).reduce((a,b) => a + (b.total - (b.paid||0)), 0);
+        const warn = document.getElementById('shop-credit-warning');
+        warn.innerHTML = totalCredit > 0 ? `<div class="credit-alert">⚠️ PREVIOUS CREDIT: RS. ${totalCredit.toFixed(2)}</div>` : "";
         
         document.getElementById('i-paid').value = 0;
-        upCart();
+        updateCartUI();
     }
 
-    // CORE FUNCTIONS
-    function upFree() { const i = db.items[document.getElementById('i-item').value]; if(!i) return; document.getElementById('i-free').value = i.scheme > 0 ? Math.floor(document.getElementById('i-qty').value / i.scheme) : 0; }
-    function addCart() { const idx = document.getElementById('i-item').value; if(idx==="") return; cart.push({ ...db.items[idx], qty: parseInt(document.getElementById('i-qty').value), free: parseInt(document.getElementById('i-free').value), idx }); upCart(); }
-    function upCart() { document.getElementById('cart-list').innerHTML = cart.map(c => `<div class="item-row"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`).join(''); upTotal(); }
-    function upTotal() { const sub = cart.reduce((s,c)=>s+(c.price*c.qty),0); const total = sub - parseFloat(document.getElementById('i-disc').value || 0); const paid = parseFloat(document.getElementById('i-paid').value || 0); document.getElementById('bill-total').innerText = total.toFixed(2); document.getElementById('bill-credit').innerText = (total - paid).toFixed(2); }
+    function upFree() {
+        const select = document.getElementById('i-item');
+        const item = db.items[select.value];
+        if(!item) return;
+        // Default free logic if needed
+    }
+
+    function addCart() {
+        const idx = document.getElementById('i-item').value;
+        if(idx === "") return;
+        const qty = parseInt(document.getElementById('i-qty').value);
+        const free = parseInt(document.getElementById('i-free').value) || 0;
+        const item = db.items[idx];
+        cart.push({ ...item, qty, free, dbIdx: idx });
+        updateCartUI();
+    }
+
+    function updateCartUI() {
+        const display = document.getElementById('cart-display');
+        display.innerHTML = cart.map((c, i) => `
+            <div class="item-row">
+                <span>${c.name} x ${c.qty} <small>(Free: ${c.free})</small></span>
+                <span>${(c.price * c.qty).toFixed(2)}</span>
+            </div>
+        `).join('');
+        upTotal();
+    }
+
+    function upTotal() {
+        const sub = cart.reduce((s, c) => s + (c.price * c.qty), 0);
+        const paid = parseFloat(document.getElementById('i-paid').value) || 0;
+        document.getElementById('bill-total').innerText = sub.toFixed(2);
+        document.getElementById('bill-credit').innerText = (sub - paid).toFixed(2);
+    }
 
     function saveBill() {
-        if(!cart.length) return;
-        const bNo = "NIK-" + String(db.nextBill || 1).padStart(4, '0');
+        if(cart.length === 0) return;
         const total = parseFloat(document.getElementById('bill-total').innerText);
-        const paid = parseFloat(document.getElementById('i-paid').value || 0);
-        const html = `<div style="font-family:monospace; text-align:center; font-size:12px;">
-            <b>Gamirasa Food Product Pvt Ltd</b><br>Tel: 0701242299<br>
-            --------------------------------<br><b>INVOICE: ${bNo}</b><br>Shop: ${curS}<br>
-            --------------------------------<br>${cart.map(c => `<div style="display:flex; justify-content:space-between"><span>${c.name} x${c.qty}</span><span>${(c.price*c.qty).toFixed(2)}</span></div>`).join('')}
-            --------------------------------<br><b>TOTAL: RS. ${total.toFixed(2)}</b><br>CASH PAID: RS. ${paid.toFixed(2)}<br>
-            CREDIT: RS. ${(total-paid).toFixed(2)}<br>--------------------------------<br>Thank You!</div>`;
-        cart.forEach(c => db.items[c.idx].stock -= (c.qty + c.free));
-        db.sales.push({ date: new Date().toISOString().split('T')[0], billNo: bNo, shop: curS, total: total, paid: paid });
-        db.nextBill++; sync(); cloudAction('push', true);
+        const paid = parseFloat(document.getElementById('i-paid').value) || 0;
+        const bNo = "NIK-" + String(db.nextBill).padStart(4, '0');
+        
+        const billData = {
+            billNo: bNo,
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toLocaleTimeString(),
+            shop: curS,
+            items: [...cart],
+            total: total,
+            paid: paid
+        };
+
+        // Update Stock
+        cart.forEach(c => { db.items[c.dbIdx].stock -= (c.qty + c.free); });
+        
+        db.sales.push(billData);
+        db.nextBill++;
+        sync();
+        cloudAction('push', true);
+        
+        renderPrint(billData);
+    }
+
+    function renderPrint(b) {
+        const html = `
+            <div style="font-family:monospace; text-align:center; font-size:12px; color:black;">
+                <b style="font-size:16px;">Gamirasa Food Product Pvt Ltd</b><br>
+                No 5379, Yaya 01, Aliolu Ara, Sooriyawewa<br>
+                Tel: 0701242299<br>
+                --------------------------------<br>
+                <b>INVOICE: ${b.billNo}</b><br>
+                Date: ${b.date} ${b.time}<br>
+                Shop: ${b.shop}<br>
+                --------------------------------<br>
+                <div style="text-align:left">
+                ${b.items.map(i => `<div style="display:flex; justify-content:space-between"><span>${i.name} x${i.qty}</span><span>${(i.price*i.qty).toFixed(2)}</span></div>`).join('')}
+                </div>
+                --------------------------------<br>
+                <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                    <span>NET TOTAL:</span><span>RS. ${b.total.toFixed(2)}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span>CASH PAID:</span><span>RS. ${b.paid.toFixed(2)}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; color:red;">
+                    <span>CREDIT BAL:</span><span>RS. ${(b.total - b.paid).toFixed(2)}</span>
+                </div>
+                --------------------------------<br>
+                Thank You! Come Again.
+            </div>`;
         document.getElementById('print-data').innerHTML = html;
         document.getElementById('print-overlay').style.display = 'block';
     }
 
+    // --- CREDIT TAB FUNCTIONS ---
+    function renderCreditTab() {
+        const shops = {};
+        let grand = 0;
+        db.sales.forEach((s, idx) => {
+            const bal = s.total - (s.paid || 0);
+            if(bal > 0.01) {
+                if(!shops[s.shop]) shops[s.shop] = [];
+                shops[s.shop].push({ ...s, dbIdx: idx, bal });
+                grand += bal;
+            }
+        });
+
+        document.getElementById('total-market-credit').innerText = "Rs. " + grand.toFixed(2);
+        let html = "";
+        for(let name in shops) {
+            html += `<div class="card">
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:5px;">
+                    <b>${name}</b>
+                    <b style="color:var(--danger)">Rs. ${shops[name].reduce((a,b)=>a+b.bal,0).toFixed(2)}</b>
+                </div>`;
+            shops[name].forEach(bill => {
+                html += `<div class="item-row" style="font-size:0.8rem">
+                    <span>${bill.date} (${bill.billNo})</span>
+                    <span>Rs.${bill.bal.toFixed(2)} <button class="btn-blue btn-sm" onclick="settleOne(${bill.dbIdx})">SETTLE</button></span>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+        document.getElementById('credit-display-list').innerHTML = html || "<center>No Credit Balance</center>";
+    }
+
+    function settleOne(idx) {
+        const bill = db.sales[idx];
+        const due = bill.total - (bill.paid || 0);
+        const amt = prompt(`Paying for ${bill.billNo}. Amount:`, due.toFixed(2));
+        if(!amt || isNaN(amt)) return;
+        db.sales[idx].paid += parseFloat(amt);
+        sync(); cloudAction('push', true); renderCreditTab();
+    }
+
+    // --- UTILS ---
+    function renderStockTab() {
+        document.getElementById('stock-inventory-list').innerHTML = db.items.map(i => `
+            <div class="item-row">
+                <span>${i.name}</span>
+                <b style="color:${i.stock < 10 ? 'red' : 'green'}">${i.stock}</b>
+            </div>
+        `).join('');
+    }
+
+    function runRep() {
+        const d = document.getElementById('rep-date').value;
+        const daily = db.sales.filter(s => s.date === d);
+        const cash = daily.reduce((a, b) => a + b.paid, 0);
+        const sales = daily.reduce((a, b) => a + b.total, 0);
+        document.getElementById('rep-res').innerHTML = `
+            <div style="margin-top:15px; background:#f8fafc; padding:10px; border-radius:8px;">
+                <p>Total Sales: <b>Rs.${sales.toFixed(2)}</b></p>
+                <p>Cash Collected: <b>Rs.${cash.toFixed(2)}</b></p>
+                <p>Credit Given: <b>Rs.${(sales-cash).toFixed(2)}</b></p>
+            </div>
+        ` + daily.map(s => `<div class="item-row"><span>${s.shop}</span><span>${s.total.toFixed(2)}</span></div>`).join('');
+    }
+
+    function refreshUI() {
+        // Refresh Route List
+        document.getElementById('route-list').innerHTML = db.routes.map((r, i) => `
+            <button class="btn-blue" style="margin-bottom:10px; height:60px; font-size:1.1rem" onclick="openRoute(${i})">${r.name}</button>
+        `).join('');
+        
+        // Refresh Item Dropdown
+        document.getElementById('i-item').innerHTML = `<option value="">-- Select Product --</option>` + 
+            db.items.map((it, i) => `<option value="${i}">${it.name} (Rs.${it.price})</option>`).join('');
+            
+        // Refresh Setup Route Select
+        document.getElementById('set-r-sel').innerHTML = db.routes.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
+    }
+
+    function init() { refreshUI(); }
     function doPrint() {
         const frame = document.getElementById('print-frame');
         const doc = frame.contentWindow.document;
@@ -237,32 +443,6 @@
     }
     function closePrint() { document.getElementById('print-overlay').style.display = 'none'; showV('pos'); }
 
-    function runRep() {
-        const d = document.getElementById('rep-date').value;
-        const sales = db.sales.filter(s => s.date === d);
-        document.getElementById('rep-res').innerHTML = `<div class="card" style="background:#f0f9ff">
-            <h4>Summary (${d})</h4>
-            <p>Sales: Rs. ${sales.reduce((s,x)=>s+x.total,0).toFixed(2)}</p>
-            <p>Cash: Rs. ${sales.reduce((s,x)=>s+(x.paid||0),0).toFixed(2)}</p>
-            </div>` + sales.map(s => `<div class="item-row"><span>${s.billNo} - ${s.shop}</span><b>${s.total.toFixed(2)}</b></div>`).join('');
-    }
-
-    function addItem() {
-        const n = document.getElementById('set-p-n'), p = document.getElementById('set-p-p'), s = document.getElementById('set-p-s');
-        if(!n.value || !p.value) return;
-        db.items.push({ name: n.value, price: parseFloat(p.value), stock: parseInt(s.value)||0, scheme: 0 });
-        n.value = ""; p.value = ""; s.value = "";
-        sync(); cloudAction('push', true); alert("Saved!");
-    }
-    function addRoute() { const i = document.getElementById('set-r-n'); db.routes.push({ name: i.value, shops: [] }); i.value = ""; sync(); cloudAction('push', true); }
-    function addShop() { const i = document.getElementById('set-s-n'), r = document.getElementById('set-r-sel').value; db.routes[r].shops.push(i.value); i.value = ""; sync(); cloudAction('push', true); }
-
-    function refresh() {
-        document.getElementById('route-sel').innerHTML = db.routes.map((r,i) => `<button class="btn-blue" style="margin-bottom:10px" onclick="openR(${i})">${r.name}</button>`).join('');
-        document.getElementById('set-r-sel').innerHTML = db.routes.map((r,i) => `<option value="${i}">${r.name}</option>`).join('');
-        document.getElementById('i-item').innerHTML = `<option value="">-- Select Item --</option>` + db.items.map((it,i) => `<option value="${i}">${it.name}</option>`).join('');
-        document.getElementById('stock-list').innerHTML = db.items.map(it => `<div class="item-row"><span>${it.name}</span><b>${it.stock}</b></div>`).join('');
-    }
 </script>
 </body>
 </html>
