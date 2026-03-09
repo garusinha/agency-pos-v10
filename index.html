@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
@@ -637,9 +639,21 @@
     </datalist>
 
     <script>
-      // --- CLOUD CONFIG ---
-      const CLOUD_TOKEN = "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";
-      const CLOUD_GIST = "0c3f0cb67d4be33a00862eb3b31e9ecf";
+      // --- FIREBASE CONFIGURATION ---
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "your-project-id.firebaseapp.com",
+        databaseURL:
+          "https://gamirasa-erp-default-rtdb.asia-southeast1.firebasedatabase.app/",
+        projectId: "gamirasa-erp",
+        storageBucket: "your-project-id.appspot.com",
+        messagingSenderId: "...",
+        appId: "...",
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const rtdb = firebase.database();
 
       // --- DATABASE INITIALIZATION ---
       let db = JSON.parse(localStorage.getItem("gamirasa_v17_db")) || {
@@ -664,52 +678,50 @@
           document.getElementById("display-rep").innerText = activeRep;
           document.getElementById("display-date").innerText =
             new Date().toLocaleDateString();
-          cloudAction("pull");
+          startRealtimeSync();
         } else {
           alert("INVALID SECURITY PIN");
         }
       }
-
-      // --- CLOUD SYNC ---
-      async function cloudAction(mode) {
+      // --- REAL-TIME SYNC (Firebase Version) ---
+      function startRealtimeSync() {
         document.getElementById("sync-status").innerText =
-          "☁️ CONNECTING TO CLOUD...";
-        try {
-          const headers = {
-            Authorization: `token ${CLOUD_TOKEN}`,
-            "Content-Type": "application/json",
-          };
-          if (mode === "push") {
-            await fetch(`https://api.github.com/gists/${CLOUD_GIST}`, {
-              method: "PATCH",
-              headers,
-              body: JSON.stringify({
-                files: { "gamirasa_erp.json": { content: JSON.stringify(db) } },
-              }),
-            });
-          } else {
-            const res = await fetch(
-              `https://api.github.com/gists/${CLOUD_GIST}`,
-              { headers },
-            );
-            const data = await res.json();
-            if (data.files["gamirasa_erp.json"]) {
-              db = JSON.parse(data.files["gamirasa_erp.json"].content);
-              localStorage.setItem("gamirasa_v17_db", JSON.stringify(db));
-            }
+          "☁️ CONNECTING TO FIREBASE...";
+
+        // This "listens" for changes. If one rep sells an item, others see the stock update instantly.
+        rtdb.ref("gamirasa_data").on("value", (snapshot) => {
+          const cloudData = snapshot.val();
+          if (cloudData) {
+            db = cloudData;
+            localStorage.setItem("gamirasa_v17_db", JSON.stringify(db));
+            document.getElementById("sync-status").innerText =
+              "✅ LIVE: " + new Date().toLocaleTimeString();
+            refreshUI();
           }
-          document.getElementById("sync-status").innerText =
-            "✅ CLOUD SYNCED: " + new Date().toLocaleTimeString();
-          refreshUI();
-        } catch (e) {
-          document.getElementById("sync-status").innerText = "⚠️ OFFLINE MODE";
-        }
+        });
       }
 
       function triggerSync() {
+        // Save locally first
         localStorage.setItem("gamirasa_v17_db", JSON.stringify(db));
-        cloudAction("push");
-        refreshUI();
+
+        // Push to Firebase
+        rtdb
+          .ref("gamirasa_data")
+          .set(db)
+          .catch((error) => {
+            console.error("Firebase Error:", error);
+            document.getElementById("sync-status").innerText = "⚠️ SYNC ERROR";
+          });
+      }
+      function calculateTruckBalance() {
+        console.log("--- End of Day Truck Report ---");
+        db.items.forEach((item) => {
+          // This assumes your 'stock' in DB is the total available in the truck
+          if (item.stock > 0) {
+            console.log(`${item.name}: ${item.stock} units remaining.`);
+          }
+        });
       }
 
       // --- VIEW MANAGEMENT ---
@@ -1059,20 +1071,27 @@
           renderCreditList();
         }
       }
-
       function renderInventory() {
-        document.getElementById("inventory-list").innerHTML = db.items
+        const listHtml = db.items
           .map(
             (it) => `
-            <div class="item-row">
-                <span>${it.name} <br><small>Price: ${it.price}</small></span>
-                <b style="${it.stock < 10 ? "color:red" : ""}">${it.stock}</b>
+        <div class="item-row">
+            <div>
+                <b style="display:block;">${it.name}</b>
+                <small>Price: Rs. ${it.price.toFixed(2)}</small>
             </div>
-        `,
+            <div style="text-align:right;">
+                <span class="stat-label">Truck Stock</span>
+                <b class="stat-val" style="${it.stock < 10 ? "color:var(--danger)" : ""}">${it.stock}</b>
+            </div>
+        </div>
+    `,
           )
           .join("");
-      }
 
+        document.getElementById("inventory-list").innerHTML =
+          listHtml || "<p>No items in truck.</p>";
+      }
       function renderDeliveryList() {
         const pending = db.sales.filter((s) => s.status === "pending");
         document.getElementById("pending-delivery-list").innerHTML =
@@ -1090,9 +1109,19 @@
       }
 
       function refreshUI() {
+        // 1. Update Admin Selectors
         document.getElementById("adm-r-select").innerHTML = db.routes
           .map((r, i) => `<option value="${i}">${r.name}</option>`)
           .join("");
+
+        // 2. Identify which view is currently visible and refresh its data
+        const activeView = document
+          .querySelector(".nav-link.active")
+          ?.innerText.toLowerCase();
+        if (activeView === "delivery") renderDeliveryList();
+        if (activeView === "credits") renderCreditList();
+        if (activeView === "stocks") renderInventory();
+        if (activeView === "summary") generateSummary();
       }
 
       function closeBill() {
@@ -1102,4 +1131,3 @@
     </script>
   </body>
 </html>
-
