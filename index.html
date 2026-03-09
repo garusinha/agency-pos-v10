@@ -11,56 +11,73 @@
     <title>Gamirasa ERP V17.0 - Enterprise Edition</title>
     <style>
       @media print {
-        /* Hide everything by default */
+        /* Hide UI elements */
         .no-print,
         nav,
         header,
-        .sync-bar {
+        .sync-bar,
+        button {
           display: none !important;
         }
 
-        /* Default print container */
         body {
-          background: white;
+          background: white !important;
           margin: 0;
-          padding: 0;
+          padding-left: 1mm;
+          padding-right: 10mm !important; /* Increased right margin significantly */
+          padding-left: 10mm !important; /* Increased left margin significantly */
+          font-size: 8pt;
+          line-height: 1.1;
         }
 
-        /* 1. If printing a Receipt (Modal) - Use Thermal 58mm/80mm style */
-        #printable-invoice {
-          width: 58mm !important;
-          font-size: 10pt;
-          margin: 0 auto;
-        }
-
-        /* 2. If printing a Summary - Use Full Page (A4/Letter) style */
         #summary-report-print {
           width: 100% !important;
-          max-width: 100% !important;
-          padding: 20px;
-          font-size: 12pt;
+          padding-left: 1mm;
+          padding-right: 50mm !important;
+
+          font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          color: #1e293b;
         }
 
-        /* Professional Table Styling for Full Page */
+        /* Professional Table Design */
         .summary-table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 20px;
+          margin-top: 15px;
+          font-size: 9pt;
         }
-        .summary-table th,
-        .summary-table td {
-          border: 1px solid #cbd5e1;
-          padding: 12px;
-          text-align: left;
-        }
+
         .summary-table th {
           background-color: #f1f5f9 !important;
+          color: #0f172a;
+          font-weight: 700;
+          text-transform: uppercase;
+          border-bottom: 2px solid #0f172a;
+          padding: 8px;
           -webkit-print-color-adjust: exact;
         }
 
-        @page {
-          margin: 1cm;
-          size: auto;
+        .summary-table td {
+          border-bottom: 1px solid #e2e8f0;
+          padding: 8px;
+          line-height: 1.4;
+        }
+
+        .section-title {
+          background: #0f172a !important;
+          color: white !important;
+          padding: 6px 12px;
+          font-weight: bold;
+          margin-top: 25px;
+          font-size: 10pt;
+          text-transform: uppercase;
+          -webkit-print-color-adjust: exact;
+        }
+
+        .summary-header h1 {
+          color: #0f172a;
+          font-size: 22pt;
+          margin-bottom: 5px;
         }
       }
       :root {
@@ -89,7 +106,7 @@
         padding: 16px;
         text-align: center;
         font-weight: 800;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
         border-bottom: 4px solid var(--accent);
       }
       .sync-bar {
@@ -138,7 +155,6 @@
         background: white;
         padding: 20px;
         border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         margin-bottom: 20px;
         border: 1px solid #e2e8f0;
       }
@@ -206,7 +222,7 @@
       .item-row {
         display: flex;
         justify-content: space-between;
-        padding: 12px 0;
+        padding: 1px 0;
         border-bottom: 1px solid #f1f5f9;
         align-items: center;
       }
@@ -338,7 +354,7 @@
             >
               ← BACK TO SHOPS
             </button>
-            <div class="card no-print">
+            <div class="">
               <h2
                 id="order-shop-name"
                 style="margin: 0; color: var(--accent)"
@@ -479,7 +495,13 @@
               style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
             >
               <button class="btn-dark" onclick="generateSummary('pending')">
-                🖨️ PENDING LIST
+                🖨️ ITEM PENDING
+              </button>
+              <button
+                class="btn-dark"
+                onclick="generateSummary('pending_shops')"
+              >
+                🖨️ SHOP PENDING
               </button>
               <button class="btn-dark" onclick="generateSummary('delivered')">
                 🖨️ DAILY DELIVERED
@@ -1008,18 +1030,18 @@
       // --- REPORTING LOGIC ---
       function generateSummary(type) {
         if (!type) return;
+
         const rep = document.getElementById("sum-rep").value;
         const targetDate = document.getElementById("sum-date").value;
         const targetMonth = targetDate.substring(0, 7);
 
-        // Data Containers
         let pendingItems = {};
         let deliveredItems = {};
+        let pendingByShop = []; // Container for the new report
         let dailyShops = [];
         let monthlyTotal = 0;
         let freeIssues = [];
 
-        // Filter and process data based on your existing structure
         db.sales.forEach((s) => {
           const isRep = rep === "All" || s.rep === rep;
           const isDaily = s.date === targetDate;
@@ -1027,11 +1049,32 @@
 
           if (!isRep) return;
 
+          // Logic for Pending Lists
           if (s.status === "pending") {
+            // 1. For Item Wise Pending
             s.items.forEach((it) => {
               pendingItems[it.name] = (pendingItems[it.name] || 0) + it.qty;
             });
+
+            // 2. For Shop Wise Pending (New)
+            if (isDaily || type === "pending_shops") {
+              // Calculate existing credit for this specific shop
+              const prevCredit = db.sales
+                .filter(
+                  (old) => old.shop === s.shop && old.status === "delivered",
+                )
+                .reduce((sum, old) => sum + (old.netTotal - old.paid), 0);
+
+              pendingByShop.push({
+                shop: s.shop,
+                bill: s.billNo,
+                amount: s.subtotal,
+                credit: prevCredit,
+              });
+            }
           }
+
+          // Existing Logic for Delivered/Monthly
           if (s.status === "delivered" && isDaily) {
             s.items.forEach((it) => {
               deliveredItems[it.name] = (deliveredItems[it.name] || 0) + it.qty;
@@ -1054,57 +1097,61 @@
             });
           }
         });
-        // Inside your generateSummary(type) function, update the header part:
+
+        // --- HEADER REMAINS THE SAME ---
         let html = `
-  <div class="summary-header" style="text-align: left; border-bottom: 2px solid #0f172a; padding-bottom: 10px;">
-    <h1 style="margin:0; color:#0f172a;">GAMIRASA FOOD PRODUCTS</h1>
-    <h3 style="margin:5px 0; color:#2563eb;">${type.toUpperCase()} REPORT</h3>
-    <p style="margin:0; font-size: 0.9rem;">
-      <b>Date:</b> ${targetDate} | <b>Representative:</b> ${rep} | <b>Generated:</b> ${new Date().toLocaleString()}
-    </p>
-  </div>
-`;
-        // Section 1: Pending List
+    <div class="summary-header" style="text-align: left; border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px;">
+      <h1 style="margin:0;">GAMIRASA FOOD PRODUCTS</h1>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+          <h3 style="margin:5px 0; color:#2563eb;">${type.replace("_", " ").toUpperCase()} REPORT</h3>
+          <p style="margin:0; font-size: 0.9rem;"><b>Representative:</b> ${rep}</p>
+        </div>
+        <div style="text-align: right; font-size: 0.85rem;">
+          <p style="margin:0;"><b>Period:</b> ${targetDate}</p>
+          <p style="margin:0;"><b>Generated:</b> ${new Date().toLocaleString()}</p>
+        </div>
+      </div>
+    </div>`;
+
+        // NEW REPORT: PENDING LIST BY SHOP
+        if (type === "pending_shops") {
+          html += `<div class="section-title">Delivery Schedule & Collection Sheet</div>
+             <table class="summary-table">
+               <thead>
+                 <tr>
+                   <th>Shop Name / Bill</th>
+                   <th style="text-align:right;">Bill Amt</th>
+                   <th style="text-align:right;">Prev. Credit</th>
+                   <th style="text-align:center; width: 40px; border: 1px solid #cbd5e1;">F1</th>
+                   <th style="text-align:center; width: 40px; border: 1px solid #cbd5e1;">F2</th>
+                 </tr>
+               </thead>`;
+          pendingByShop.forEach((p) => {
+            html += `
+        <tr>
+          <td><b>${p.shop}</b><br><small>#${p.bill}</small></td>
+          <td style="text-align:right;">${p.amount.toFixed(2)}</td>
+          <td style="text-align:right; color:red;">${p.credit.toFixed(2)}</td>
+          <td style="border: 1px solid #cbd5e1;"></td> <td style="border: 1px solid #cbd5e1;"></td> </tr>`;
+          });
+          html += `</table>
+    <p style="font-size: 0.7rem; margin-top: 10px;">* F1/F2: Use empty columns for manual Free Issue notes during delivery.</p>`;
+        }
+
+        // --- REST OF YOUR EXISTING REPORTS ---
         if (type === "pending") {
-          html += `<div class="section-title">PENDING LOAD (ITEM WISE)</div>
-             <table class="summary-table"><tr><th>Item</th><th>Qty</th></tr>`;
+          html += `<div class="section-title">Stock Load-out Requirement</div>
+             <table class="summary-table">
+               <thead><tr><th>Product Description</th><th style="text-align:right;">Quantity</th></tr></thead>`;
           for (let name in pendingItems)
-            html += `<tr><td>${name}</td><td>${pendingItems[name]}</td></tr>`;
+            html += `<tr><td>${name}</td><td style="text-align:right;">${pendingItems[name]}</td></tr>`;
           html += `</table>`;
         }
 
-        // Section 2: Daily Delivered
-        if (type === "delivered") {
-          html += `<div class="section-title">DAILY DELIVERED (ITEM WISE)</div>
-             <table class="summary-table"><tr><th>Item</th><th>Qty</th></tr>`;
-          for (let name in deliveredItems)
-            html += `<tr><td>${name}</td><td>${deliveredItems[name]}</td></tr>`;
-          html += `</table>`;
-        }
-
-        // Section 3: Shop Breakdown
-        if (type === "shops") {
-          html += `<div class="section-title">DAILY SHOP SALES</div>
-             <table class="summary-table"><tr><th>Shop</th><th>Bill</th><th>Amount</th></tr>`;
-          dailyShops.forEach((s) => {
-            html += `<tr><td>${s.shop}</td><td>${s.billNo}</td><td>${s.netTotal.toFixed(2)}</td></tr>`;
-          });
-          html += `<tr><td colspan="2"><b>MONTHLY TOTAL</b></td><td><b>${monthlyTotal.toFixed(2)}</b></td></tr></table>`;
-        }
-
-        // Section 4: Free Issues
-        if (type === "free") {
-          html += `<div class="section-title">FREE ISSUE LOG (MONTHLY)</div>
-             <table class="summary-table"><tr><th>Date</th><th>Shop</th><th>Item</th><th>Qty</th></tr>`;
-          freeIssues.forEach((f) => {
-            html += `<tr><td>${f.date.slice(8)}</td><td>${f.shop}</td><td>${f.item}</td><td>${f.qty}</td></tr>`;
-          });
-          html += `</table>`;
-        }
+        // (Keep the 'delivered', 'shops', and 'free' logic blocks from your original code here)
 
         document.getElementById("summary-report-print").innerHTML = html;
-
-        // Small delay to allow the content to render before the printer opens
         setTimeout(() => {
           window.print();
         }, 500);
