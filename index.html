@@ -1046,6 +1046,7 @@
       }
 
       // --- REPORTING LOGIC ---
+
       function generateSummary(type) {
         if (!type) return;
 
@@ -1055,7 +1056,7 @@
 
         let pendingItems = {};
         let deliveredItems = {};
-        let pendingByShop = []; // Container for the new report
+        let pendingByShop = [];
         let dailyShops = [];
         let monthlyTotal = 0;
         let freeIssues = [];
@@ -1067,16 +1068,11 @@
 
           if (!isRep) return;
 
-          // Logic for Pending Lists
           if (s.status === "pending") {
-            // 1. For Item Wise Pending
             s.items.forEach((it) => {
               pendingItems[it.name] = (pendingItems[it.name] || 0) + it.qty;
             });
-
-            // 2. For Shop Wise Pending (New)
             if (isDaily || type === "pending_shops") {
-              // Calculate existing credit for this specific shop
               const prevCredit = db.sales
                 .filter(
                   (old) => old.shop === s.shop && old.status === "delivered",
@@ -1092,14 +1088,13 @@
             }
           }
 
-          // Existing Logic for Delivered/Monthly
           if (s.status === "delivered" && isDaily) {
             s.items.forEach((it) => {
               deliveredItems[it.name] = (deliveredItems[it.name] || 0) + it.qty;
             });
           }
           if (s.status === "delivered" && isMonthly) {
-            monthlyTotal += s.netTotal;
+            monthlyTotal += s.netTotal || 0;
             if (isDaily) dailyShops.push(s);
           }
           if (isMonthly) {
@@ -1116,7 +1111,6 @@
           }
         });
 
-        // --- HEADER REMAINS THE SAME ---
         let html = `
     <div class="summary-header" style="text-align: left; border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px;">
       <h1 style="margin:0;">GAMIRASA FOOD PRODUCTS</h1>
@@ -1132,7 +1126,6 @@
       </div>
     </div>`;
 
-        // NEW REPORT: PENDING LIST BY SHOP
         if (type === "pending_shops") {
           html += `<div class="section-title">Delivery Schedule & Collection Sheet</div>
              <table class="summary-table">
@@ -1146,18 +1139,16 @@
                  </tr>
                </thead>`;
           pendingByShop.forEach((p) => {
-            html += `
-        <tr>
+            html += `<tr>
           <td><b>${p.shop}</b><br><small>#${p.bill}</small></td>
           <td style="text-align:right;">${p.amount.toFixed(2)}</td>
           <td style="text-align:right; color:red;">${p.credit.toFixed(2)}</td>
-          <td style="border: 1px solid #cbd5e1;"></td> <td style="border: 1px solid #cbd5e1;"></td> </tr>`;
+          <td style="border: 1px solid #cbd5e1;"></td><td style="border: 1px solid #cbd5e1;"></td>
+        </tr>`;
           });
-          html += `</table>
-    <p style="font-size: 0.7rem; margin-top: 10px;">* F1/F2: Use empty columns for manual Free Issue notes during delivery.</p>`;
+          html += `</table>`;
         }
 
-        // --- REST OF YOUR EXISTING REPORTS ---
         if (type === "pending") {
           html += `<div class="section-title">Stock Load-out Requirement</div>
              <table class="summary-table">
@@ -1167,7 +1158,40 @@
           html += `</table>`;
         }
 
-        // (Keep the 'delivered', 'shops', and 'free' logic blocks from your original code here)
+        // --- RESTORED BLOCKS BELOW ---
+        if (type === "delivered") {
+          html += `<div class="section-title">Daily Sales Distribution</div>
+             <table class="summary-table">
+               <thead><tr><th>Product Description</th><th style="text-align:right;">Total Sold</th></tr></thead>`;
+          for (let name in deliveredItems)
+            html += `<tr><td>${name}</td><td style="text-align:right;">${deliveredItems[name]}</td></tr>`;
+          html += `</table>`;
+        }
+
+        if (type === "shops") {
+          html += `<div class="section-title">Shop Collection Audit</div>
+             <table class="summary-table">
+               <thead><tr><th>Shop Name</th><th>Bill No</th><th style="text-align:right;">Amount (Rs.)</th></tr></thead>`;
+          dailyShops.forEach((s) => {
+            html += `<tr><td>${s.shop}</td><td>#${s.billNo}</td><td style="text-align:right;">${(s.netTotal || 0).toFixed(2)}</td></tr>`;
+          });
+          html += `
+      <tr style="background:#f1f5f9; font-weight:bold;">
+        <td colspan="2">MONTHLY CUMULATIVE TOTAL</td>
+        <td style="text-align:right; font-size: 1.1rem; color:#059669;">Rs. ${monthlyTotal.toFixed(2)}</td>
+      </tr>
+    </table>`;
+        }
+
+        if (type === "free") {
+          html += `<div class="section-title">Marketing & Free Issue Log (Monthly)</div>
+             <table class="summary-table">
+               <thead><tr><th>Date</th><th>Customer/Shop</th><th>Item Name</th><th style="text-align:right;">Qty</th></tr></thead>`;
+          freeIssues.forEach((f) => {
+            html += `<tr><td>${f.date}</td><td>${f.shop}</td><td>${f.item}</td><td style="text-align:right;">${f.qty}</td></tr>`;
+          });
+          html += `</table>`;
+        }
 
         document.getElementById("summary-report-print").innerHTML = html;
         setTimeout(() => {
