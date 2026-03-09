@@ -10,6 +10,36 @@
     />
     <title>Gamirasa ERP V17.0 - Enterprise Edition</title>
     <style>
+      @media print {
+        /* Set the width for 58mm/80mm thermal paper */
+        body,
+        .modal,
+        #printable-invoice {
+          width: 58mm; /* Change to 80mm if using a larger printer */
+          margin: 0;
+          padding: 2mm;
+          font-size: 10pt;
+        }
+
+        .no-print,
+        nav,
+        header,
+        .sync-bar {
+          display: none !important;
+        }
+
+        .card {
+          border: none !important;
+          box-shadow: none !important;
+          width: 100% !important;
+        }
+
+        /* Ensure the receipt is a continuous strip */
+        @page {
+          margin: 0;
+          size: auto;
+        }
+      }
       :root {
         --primary: #0f172a;
         --accent: #2563eb;
@@ -936,18 +966,24 @@
       function openInvoice(id) {
         activeSaleObj = db.sales.find((s) => s.id === id);
         document.getElementById("bill-shop").innerText = activeSaleObj.shop;
-        document.getElementById("bill-header-data").innerText =
-          `INV: ${activeSaleObj.billNo} | ${activeSaleObj.date} | REP: ${activeSaleObj.rep}`;
 
+        // Create a compact header for small paper
+        document.getElementById("bill-header-data").innerHTML = `
+    ${activeSaleObj.date}<br>
+    INV: ${activeSaleObj.billNo} | REP: ${activeRep}
+  `;
+
+        // Format items for narrow paper
         document.getElementById("bill-items-area").innerHTML =
           activeSaleObj.items
             .map(
               (it) => `
-            <div class="item-row" style="font-size:0.85rem;">
-                <span>${it.name} (x${it.qty}) ${it.free > 0 ? `<br><small>Free Issue: ${it.free}</small>` : ""}</span>
-                <span>${(it.qty * it.price).toFixed(2)}</span>
-            </div>
-        `,
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px dotted #ccc;">
+          <span style="width: 60%">${it.name} ${it.free > 0 ? `(+${it.free}F)` : ""}</span>
+          <span>${it.qty} x ${it.price}</span>
+          <span style="font-weight: bold">${(it.qty * it.price).toFixed(2)}</span>
+      </div>
+    `,
             )
             .join("");
 
