@@ -231,7 +231,7 @@
       }
 
       /* Print Utilities */
-      @media print {
+      /* @media print {
         .no-print {
           display: none !important;
         }
@@ -245,6 +245,32 @@
         }
         body {
           background: white;
+        }
+      } */
+      @media print {
+        .summary-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.8rem;
+          margin-top: 10px;
+        }
+        .summary-table th,
+        .summary-table td {
+          border: 1px solid #000;
+          padding: 4px;
+          text-align: left;
+        }
+        .summary-header {
+          text-align: center;
+          border-bottom: 2px double #000;
+          margin-bottom: 10px;
+        }
+        .section-title {
+          background: #eee;
+          font-weight: bold;
+          padding: 4px;
+          margin-top: 15px;
+          border: 1px solid #000;
         }
       }
       .print-only {
@@ -450,68 +476,45 @@
             <div id="inventory-list"></div>
           </div>
         </div>
-
         <div id="v-summary" style="display: none">
           <div class="card no-print">
-            <h3>Financial Filters</h3>
+            <h3>Summary Filters</h3>
+            <div class="form-group">
+              <label>SELECT REPRESENTATIVE</label>
+              <select id="sum-rep">
+                <option value="All">ALL REPS</option>
+                <option value="Rep A">ROHAN</option>
+                <option value="Rep B">ISHAN</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>SELECT DATE</label>
+              <input type="date" id="sum-date" />
+            </div>
+          </div>
+
+          <div class="card no-print">
+            <h3>Professional Summary Controls</h3>
             <div
               style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
             >
-              <select id="sum-rep">
-                <option value="All">All Reps</option>
-                <option value="Rep A">Rep A</option>
-                <option value="Rep B">Rep B</option>
-              </select>
-              <input type="date" id="sum-date" />
+              <button class="btn-dark" onclick="generateSummary('pending')">
+                🖨️ PENDING LIST
+              </button>
+              <button class="btn-dark" onclick="generateSummary('delivered')">
+                🖨️ DAILY DELIVERED
+              </button>
+              <button class="btn-dark" onclick="generateSummary('shops')">
+                🖨️ SHOP SALES
+              </button>
+              <button class="btn-dark" onclick="generateSummary('free')">
+                🖨️ FREE ISSUES
+              </button>
             </div>
-            <button
-              class="btn-dark"
-              style="margin-top: 15px"
-              onclick="generateSummary()"
-            >
-              GENERATE REPORT
-            </button>
           </div>
 
-          <div class="card" id="summary-report-print">
-            <div class="print-only" style="text-align: center">
-              <h2>GAMIRASA - PERFORMANCE SUMMARY</h2>
-              <p id="sum-meta-print"></p>
-              <hr />
-            </div>
-
-            <div class="stat-grid">
-              <div class="stat-card">
-                <span class="stat-label">Gross Sales</span
-                ><span id="sum-gross" class="stat-val">0.00</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-label">9% Profit</span
-                ><span
-                  id="sum-profit"
-                  class="stat-val"
-                  style="color: var(--success)"
-                  >0.00</span
-                >
-              </div>
-              <div class="stat-card">
-                <span class="stat-label">Free Issues</span
-                ><span id="sum-free-count" class="stat-val">0</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-label">Discount Val</span
-                ><span id="sum-disc" class="stat-val">0.00</span>
-              </div>
-            </div>
-
-            <h4 style="margin-top: 25px">Daily Delivered Logs</h4>
-            <div id="summary-log-details"></div>
-          </div>
-          <button class="btn-blue no-print" onclick="window.print()">
-            📥 SAVE SUMMARY AS PDF
-          </button>
+          <div class="card" id="summary-report-print"></div>
         </div>
-
         <div id="v-setup" style="display: none">
           <div class="card">
             <h3>Admin Synchronization</h3>
@@ -783,10 +786,11 @@
         if (id === "credit") renderCreditList();
         if (id === "stock") renderInventory();
         if (id === "summary") {
-          document.getElementById("sum-date").value = new Date()
-            .toISOString()
-            .split("T")[0];
-          generateSummary();
+          const today = new Date().toISOString().split("T")[0];
+          document.getElementById("sum-date").value = today;
+          // Clear the report area so it doesn't try to print automatically
+          document.getElementById("summary-report-print").innerHTML =
+            "<p style='text-align:center;'>Select a report type above to print.</p>";
         }
       }
 
@@ -1022,50 +1026,105 @@
       }
 
       // --- REPORTING LOGIC ---
-      function generateSummary() {
+      function generateSummary(type) {
+        if (!type) return;
         const rep = document.getElementById("sum-rep").value;
-        const date = document.getElementById("sum-date").value;
+        const targetDate = document.getElementById("sum-date").value;
+        const targetMonth = targetDate.substring(0, 7);
 
-        let gross = 0,
-          profit = 0,
-          disc = 0,
-          freeCount = 0;
-        let html = "";
+        // Data Containers
+        let pendingItems = {};
+        let deliveredItems = {};
+        let dailyShops = [];
+        let monthlyTotal = 0;
+        let freeIssues = [];
 
-        const filtered = db.sales.filter(
-          (s) =>
-            s.status === "delivered" &&
-            (rep === "All" || s.rep === rep) &&
-            (date === "" || s.date === date),
-        );
+        // Filter and process data based on your existing structure
+        db.sales.forEach((s) => {
+          const isRep = rep === "All" || s.rep === rep;
+          const isDaily = s.date === targetDate;
+          const isMonthly = s.date.startsWith(targetMonth);
 
-        filtered.forEach((s) => {
-          gross += s.subtotal;
-          disc += s.discount;
-          let currentFree = 0;
-          s.items.forEach((it) => (currentFree += it.free));
-          freeCount += currentFree;
+          if (!isRep) return;
 
-          html += `
-                <div class="card" style="font-size:0.8rem; border-left: 5px solid var(--accent);">
-                    <b>${s.billNo} - ${s.shop}</b> (${s.payment.toUpperCase()})<br>
-                    <small>${s.items.map((it) => `${it.name} (x${it.qty} +F${it.free})`).join(", ")}</small><br>
-                    <b>Net: Rs. ${s.netTotal.toFixed(2)}</b>
-                </div>
-            `;
+          if (s.status === "pending") {
+            s.items.forEach((it) => {
+              pendingItems[it.name] = (pendingItems[it.name] || 0) + it.qty;
+            });
+          }
+          if (s.status === "delivered" && isDaily) {
+            s.items.forEach((it) => {
+              deliveredItems[it.name] = (deliveredItems[it.name] || 0) + it.qty;
+            });
+          }
+          if (s.status === "delivered" && isMonthly) {
+            monthlyTotal += s.netTotal;
+            if (isDaily) dailyShops.push(s);
+          }
+          if (isMonthly) {
+            s.items.forEach((it) => {
+              if (it.free > 0)
+                freeIssues.push({
+                  shop: s.shop,
+                  bill: s.billNo,
+                  date: s.date,
+                  item: it.name,
+                  qty: it.free,
+                });
+            });
+          }
         });
 
-        document.getElementById("sum-gross").innerText = gross.toFixed(2);
-        document.getElementById("sum-profit").innerText = (
-          (gross - disc) *
-          0.09
-        ).toFixed(2);
-        document.getElementById("sum-disc").innerText = disc.toFixed(2);
-        document.getElementById("sum-free-count").innerText = freeCount;
-        document.getElementById("summary-log-details").innerHTML =
-          html || "<p>No data for this filter.</p>";
-        document.getElementById("sum-meta-print").innerText =
-          `Period: ${date || "History"} | Rep: ${rep}`;
+        let html = `<div class="summary-header">
+                <h2>GAMIRASA FOODS</h2>
+                <p>${type.toUpperCase()} REPORT</p>
+                <small>${targetDate} | REP: ${rep}</small>
+              </div>`;
+
+        // Section 1: Pending List
+        if (type === "pending") {
+          html += `<div class="section-title">PENDING LOAD (ITEM WISE)</div>
+             <table class="summary-table"><tr><th>Item</th><th>Qty</th></tr>`;
+          for (let name in pendingItems)
+            html += `<tr><td>${name}</td><td>${pendingItems[name]}</td></tr>`;
+          html += `</table>`;
+        }
+
+        // Section 2: Daily Delivered
+        if (type === "delivered") {
+          html += `<div class="section-title">DAILY DELIVERED (ITEM WISE)</div>
+             <table class="summary-table"><tr><th>Item</th><th>Qty</th></tr>`;
+          for (let name in deliveredItems)
+            html += `<tr><td>${name}</td><td>${deliveredItems[name]}</td></tr>`;
+          html += `</table>`;
+        }
+
+        // Section 3: Shop Breakdown
+        if (type === "shops") {
+          html += `<div class="section-title">DAILY SHOP SALES</div>
+             <table class="summary-table"><tr><th>Shop</th><th>Bill</th><th>Amount</th></tr>`;
+          dailyShops.forEach((s) => {
+            html += `<tr><td>${s.shop}</td><td>${s.billNo}</td><td>${s.netTotal.toFixed(2)}</td></tr>`;
+          });
+          html += `<tr><td colspan="2"><b>MONTHLY TOTAL</b></td><td><b>${monthlyTotal.toFixed(2)}</b></td></tr></table>`;
+        }
+
+        // Section 4: Free Issues
+        if (type === "free") {
+          html += `<div class="section-title">FREE ISSUE LOG (MONTHLY)</div>
+             <table class="summary-table"><tr><th>Date</th><th>Shop</th><th>Item</th><th>Qty</th></tr>`;
+          freeIssues.forEach((f) => {
+            html += `<tr><td>${f.date.slice(8)}</td><td>${f.shop}</td><td>${f.item}</td><td>${f.qty}</td></tr>`;
+          });
+          html += `</table>`;
+        }
+
+        document.getElementById("summary-report-print").innerHTML = html;
+
+        // Small delay to allow the content to render before the printer opens
+        setTimeout(() => {
+          window.print();
+        }, 500);
       }
 
       function renderCreditList() {
