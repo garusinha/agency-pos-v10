@@ -820,24 +820,42 @@
         triggerSync();
         alert("STOCK UPDATED");
       }
-
       function adminSaveRoute() {
         const name = document.getElementById("adm-r-name").value.trim();
-        if (!name) return;
-        db.routes.push({ name, shops: [] });
+        if (!name) {
+          alert("Please enter a route name");
+          return;
+        }
+
+        // Initialize shops array if it doesn't exist
+        db.routes.push({ name: name, shops: [] });
+
         document.getElementById("adm-r-name").value = "";
         triggerSync();
+        refreshUI(); // <--- This ensures the list updates immediately
+        alert("ROUTE ADDED");
       }
 
       function adminSaveShop() {
         const routeIdx = document.getElementById("adm-r-select").value;
         const name = document.getElementById("adm-s-name").value.trim();
-        if (routeIdx === "" || !name) return;
-        db.routes[routeIdx].shops.push(name);
-        document.getElementById("adm-s-name").value = "";
-        triggerSync();
-      }
 
+        if (routeIdx === "" || !name) {
+          alert("Select a route and enter a shop name");
+          return;
+        }
+
+        // Ensure the route exists before pushing
+        if (db.routes[routeIdx]) {
+          if (!db.routes[routeIdx].shops) db.routes[routeIdx].shops = [];
+          db.routes[routeIdx].shops.push(name);
+
+          document.getElementById("adm-s-name").value = "";
+          triggerSync();
+          refreshUI(); // <--- Updates the selectors
+          alert("SHOP ADDED TO ROUTE");
+        }
+      }
       // --- ORDERING LOGIC ---
       function renderRoutes() {
         document.getElementById("route-selector").style.display = "block";
