@@ -473,6 +473,9 @@
           </div>
         </div>
         <div id="v-summary" style="display: none">
+          <button class="btn-green" onclick="calculateTruckBalance()">
+            🚛 TRUCK STOCK VALUE
+          </button>
           <div class="card no-print">
             <h3>Summary Filters</h3>
             <div class="form-group">
@@ -690,44 +693,92 @@
       firebase.initializeApp(firebaseConfig);
       const rtdb = firebase.database();
 
-      // --- DATABASE INITIALIZATION ---
-      let db = JSON.parse(localStorage.getItem("gamirasa_v17_db")) || {
-        items: [],
-        routes: [],
-        sales: [],
-        config: { nextBill: 10001, pin: "1234", adminPin: "2705" },
+      // --- DATABASE INITIALIZATION & REPAIR ---
+      const USERS = {
+        "Rep A": { pw: "1234", prefix: "ROH", name: "ROHAN" },
+        "Rep B": { pw: "8888", prefix: "ISH", name: "ISHAN" },
+      };
+      let db = JSON.parse(localStorage.getItem("gamirasa_v17_db")) || {};
+
+      // Force check for required structures before any function runs
+      if (!db.routes) db.routes = [];
+      if (!db.items) db.items = [];
+      if (!db.config) db.config = { nextBill: 1, adminPin: "2705" };
+      // FORCE REPAIR: Ensures routes exists and PINs are permanent
+      if (!db.routes) db.routes = [];
+      if (!db.items) db.items = [];
+      if (!db.sales) db.sales = [];
+      db.config.users = {
+        "Rep A": { pw: "1234", prefix: "ROH" }, // Rohan Permanent
+        "Rep B": { pw: "8888", prefix: "ISH" }, // Ishan Permanent
       };
 
+      // Save immediately to clear old errors
+      localStorage.setItem("gamirasa_v17_db", JSON.stringify(db));
+
+      // --- UPDATED SECURITY ---
+      function checkPin() {
+        const selectedRep = document.getElementById("user-rep").value;
+        const enteredPin = document.getElementById("sys-pin").value;
+
+        if (USERS[selectedRep] && USERS[selectedRep].pw === enteredPin) {
+          activeRep = selectedRep;
+          if (!db[`sales_${activeRep}`]) db[`sales_${activeRep}`] = []; // Private storage
+
+          document.getElementById("login-screen").style.display = "none";
+          document.getElementById("app-content").style.display = "block";
+          document.getElementById("display-rep").innerText =
+            USERS[activeRep].name;
+
+          startRealtimeSync();
+          refreshUI();
+        } else {
+          alert("INVALID SECURITY PIN");
+        }
+      }
+      function cancelFullOrder(id) {
+        if (confirm("Shop Closed? This order will be deleted.")) {
+          db[`sales_${activeRep}`] = db[`sales_${activeRep}`].filter(
+            (s) => s.id !== id,
+          );
+          triggerSync();
+          renderDeliveryList();
+        }
+      }
+
+      function removeItemFromDelivery(idx) {
+        if (confirm("Reject this item?")) {
+          activeSaleObj.items.splice(idx, 1);
+          activeSaleObj.subtotal = activeSaleObj.items.reduce(
+            (sum, i) => sum + i.qty * i.price,
+            0,
+          );
+          renderInvoiceItems(); // Refresh the modal
+        }
+      }
+
+      function getRepSales() {
+        return db[`sales_${activeRep}`] || [];
+      }
       let activeRep = "";
       let currentCart = [];
       let activeShop = "";
       let activeSaleObj = null;
 
-      // --- SECURITY ---
-      function checkPin() {
-        const pin = document.getElementById("sys-pin").value;
-        if (pin === db.config.pin) {
-          activeRep = document.getElementById("user-rep").value;
-          document.getElementById("login-screen").style.display = "none";
-          document.getElementById("app-content").style.display = "block";
-          document.getElementById("display-rep").innerText = activeRep;
-          document.getElementById("display-date").innerText =
-            new Date().toLocaleDateString();
-          startRealtimeSync();
-        } else {
-          alert("INVALID SECURITY PIN");
-        }
-      }
       // --- REAL-TIME SYNC (Firebase Version) ---
       function startRealtimeSync() {
         document.getElementById("sync-status").innerText =
           "☁️ CONNECTING TO FIREBASE...";
 
-        // This "listens" for changes. If one rep sells an item, others see the stock update instantly.
         rtdb.ref("gamirasa_data").on("value", (snapshot) => {
           const cloudData = snapshot.val();
           if (cloudData) {
+            // CRITICAL: Ensure arrays exist even if cloud data is empty
             db = cloudData;
+            if (!db.sales) db.sales = [];
+            if (!db.items) db.items = [];
+            if (!db.routes) db.routes = [];
+
             localStorage.setItem("gamirasa_v17_db", JSON.stringify(db));
             document.getElementById("sync-status").innerText =
               "✅ LIVE: " + new Date().toLocaleTimeString();
@@ -735,28 +786,25 @@
           }
         });
       }
-
       function triggerSync() {
-        // Save locally first
         localStorage.setItem("gamirasa_v17_db", JSON.stringify(db));
-
-        // Push to Firebase
-        rtdb
-          .ref("gamirasa_data")
-          .set(db)
-          .catch((error) => {
-            console.error("Firebase Error:", error);
-            document.getElementById("sync-status").innerText = "⚠️ SYNC ERROR";
-          });
+        if (typeof rtdb !== "undefined") {
+          rtdb.ref("gamirasa_data").set(db);
+        }
       }
       function calculateTruckBalance() {
-        console.log("--- End of Day Truck Report ---");
-        db.items.forEach((item) => {
-          // This assumes your 'stock' in DB is the total available in the truck
-          if (item.stock > 0) {
-            console.log(`${item.name}: ${item.stock} units remaining.`);
+        let totalValue = 0;
+        let report = "--- TRUCK STOCK BALANCE ---\n";
+        db.items.forEach((it) => {
+          if (it.stock > 0) {
+            let val = it.stock * it.price;
+            totalValue += val;
+            report += `${it.name}: ${it.stock} @ Rs.${it.price} (Val: Rs.${val.toFixed(2)})\n`;
           }
         });
+        report += `\nTOTAL TRUCK INVENTORY VALUE: Rs. ${totalValue.toFixed(2)}`;
+        alert(report);
+        console.log(report);
       }
 
       // --- VIEW MANAGEMENT ---
@@ -798,41 +846,70 @@
 
       // --- ADMIN LOGIC ---
       function adminSaveProduct() {
-        const name = document.getElementById("adm-p-name").value.trim();
-        const price = parseFloat(document.getElementById("adm-p-price").value);
-        const qty = parseInt(document.getElementById("adm-p-qty").value) || 0;
+        const nameEl = document.getElementById("adm-p-name");
+        const priceEl = document.getElementById("adm-p-price");
+        const qtyEl = document.getElementById("adm-p-qty");
 
-        if (!name || isNaN(price)) return;
+        const name = nameEl.value.trim();
+        const price = parseFloat(priceEl.value);
+        const qty = parseInt(qtyEl.value) || 0;
 
-        let existing = db.items.find(
-          (i) => i.name === name && i.price === price,
-        );
-        if (existing) {
-          existing.stock += qty;
-        } else {
-          db.items.push({ name, price, stock: qty });
-          db.items.sort((a, b) => a.name.localeCompare(b.name));
-        }
-
-        document.getElementById("adm-p-name").value = "";
-        document.getElementById("adm-p-price").value = "";
-        document.getElementById("adm-p-qty").value = "";
-        triggerSync();
-        alert("STOCK UPDATED");
-      }
-      function adminSaveRoute() {
-        const name = document.getElementById("adm-r-name").value.trim();
-        if (!name) {
-          alert("Please enter a route name");
+        if (!name || isNaN(price)) {
+          alert("Please enter a valid Product Name and Price");
           return;
         }
 
-        // Initialize shops array if it doesn't exist
+        // FIX 1: Ensure we use the 'db' variable used by the rest of the app
+        if (!db.items) db.items = [];
+
+        let existing = db.items.find(
+          (i) =>
+            i.name.toLowerCase() === name.toLowerCase() && i.price === price,
+        );
+
+        if (existing) {
+          existing.stock += qty;
+        } else {
+          db.items.push({
+            name: name,
+            price: price,
+            stock: qty,
+          });
+          db.items.sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        // FIX 2: Clear inputs
+        nameEl.value = "";
+        priceEl.value = "";
+        qtyEl.value = "";
+
+        // FIX 3: Force immediate UI refresh before sync finishes
+        renderInventory();
+        triggerSync();
+
+        alert("PRODUCT UPDATED: " + name);
+      }
+      // Add this at the top of your script so all other functions can see it
+      function getActiveSalesArray() {
+        if (!activeRep) return [];
+        const key = `sales_${activeRep}`;
+        if (!db[key]) db[key] = []; // Initialize if missing
+        return db[key];
+      }
+      function adminSaveRoute() {
+        const name = document.getElementById("adm-r-name").value.trim();
+        if (!name) return;
+
+        if (!db.routes) db.routes = [];
         db.routes.push({ name: name, shops: [] });
 
         document.getElementById("adm-r-name").value = "";
         triggerSync();
-        refreshUI(); // <--- This ensures the list updates immediately
+
+        // Only refresh if a Rep is already logged in to avoid 'filter' errors
+        if (activeRep) {
+          refreshUI();
+        }
         alert("ROUTE ADDED");
       }
 
@@ -968,9 +1045,13 @@
       function finalizePreOrder() {
         if (currentCart.length === 0) return;
 
+        const userConfig = USERS[activeRep]; // Use the USERS constant defined at top
+        const formattedNum = String(db.config.nextBill).padStart(4, "0");
+        const customBillNo = userConfig.prefix + formattedNum;
+
         const sale = {
           id: Date.now(),
-          billNo: db.config.nextBill++,
+          billNo: customBillNo,
           date: new Date().toISOString().split("T")[0],
           rep: activeRep,
           shop: activeShop,
@@ -981,38 +1062,52 @@
           status: "pending",
         };
 
-        db.sales.push(sale);
+        // Save to the representative's specific sales array
+        const key = `sales_${activeRep}`;
+        if (!db[key]) db[key] = [];
+        db[key].push(sale);
+
+        db.config.nextBill++;
         triggerSync();
         showV("order");
+      }
+      function removeItemFromDelivery(idx) {
+        if (confirm("Reject this item from delivery?")) {
+          activeSaleObj.items.splice(idx, 1);
+          activeSaleObj.subtotal = activeSaleObj.items.reduce(
+            (sum, i) => sum + i.qty * i.price,
+            0,
+          );
+          renderInvoiceItems();
+        }
       }
 
       // --- BILLING LOGIC ---
       function openInvoice(id) {
-        activeSaleObj = db.sales.find((s) => s.id === id);
+        // Find sale only in the active Rep's list
+        activeSaleObj = getRepSales().find((s) => s.id === id);
+        renderInvoiceItems();
+        document.getElementById("bill-overlay").style.display = "block";
+      }
+
+      function renderInvoiceItems() {
         document.getElementById("bill-shop").innerText = activeSaleObj.shop;
+        document.getElementById("bill-header-data").innerHTML =
+          `INV: ${activeSaleObj.billNo} | ${activeSaleObj.date}`;
 
-        // Create a compact header for small paper
-        document.getElementById("bill-header-data").innerHTML = `
-    ${activeSaleObj.date}<br>
-    INV: ${activeSaleObj.billNo} | REP: ${activeRep}
-  `;
-
-        // Format items for narrow paper
         document.getElementById("bill-items-area").innerHTML =
           activeSaleObj.items
             .map(
-              (it) => `
-      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px dotted #ccc;">
-          <span style="width: 60%">${it.name} ${it.free > 0 ? `(+${it.free}F)` : ""}</span>
-          <span>${it.qty} x ${it.price}</span>
-          <span style="font-weight: bold">${(it.qty * it.price).toFixed(2)}</span>
-      </div>
-    `,
+              (it, idx) => `
+          <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+            <span>${it.name} (${it.qty}pcs)</span>
+            <span>Rs.${(it.qty * it.price).toFixed(2)}</span>
+            <button class="no-print" onclick="removeItemFromDelivery(${idx})" style="width:30px; background:red; color:white;">X</button>
+          </div>
+        `,
             )
             .join("");
-
         calculateBill();
-        document.getElementById("bill-overlay").style.display = "block";
       }
 
       function calculateBill() {
@@ -1054,6 +1149,21 @@
         const targetDate = document.getElementById("sum-date").value;
         const targetMonth = targetDate.substring(0, 7);
 
+        // --- AGGREGATE DATA FROM CORRECT KEYS ---
+        let allSales = [];
+
+        if (rep === "All") {
+          // Collect sales from all representative-specific arrays
+          Object.keys(db).forEach((key) => {
+            if (key.startsWith("sales_") && Array.isArray(db[key])) {
+              allSales = allSales.concat(db[key]);
+            }
+          });
+        } else {
+          // Collect sales only for the selected representative
+          allSales = db[`sales_${rep}`] || [];
+        }
+
         let pendingItems = {};
         let deliveredItems = {};
         let pendingByShop = [];
@@ -1061,23 +1171,29 @@
         let monthlyTotal = 0;
         let freeIssues = [];
 
-        db.sales.forEach((s) => {
-          const isRep = rep === "All" || s.rep === rep;
+        allSales.forEach((s) => {
+          const isRepMatch = rep === "All" || s.rep === rep;
           const isDaily = s.date === targetDate;
           const isMonthly = s.date.startsWith(targetMonth);
 
-          if (!isRep) return;
+          if (!isRepMatch) return;
 
+          // Logic for Pending Reports
           if (s.status === "pending") {
             s.items.forEach((it) => {
               pendingItems[it.name] = (pendingItems[it.name] || 0) + it.qty;
             });
+
             if (isDaily || type === "pending_shops") {
-              const prevCredit = db.sales
+              // Calculate previous credit for this shop from delivered sales
+              const prevCredit = allSales
                 .filter(
                   (old) => old.shop === s.shop && old.status === "delivered",
                 )
-                .reduce((sum, old) => sum + (old.netTotal - old.paid), 0);
+                .reduce(
+                  (sum, old) => sum + ((old.netTotal || 0) - (old.paid || 0)),
+                  0,
+                );
 
               pendingByShop.push({
                 shop: s.shop,
@@ -1088,18 +1204,25 @@
             }
           }
 
-          if (s.status === "delivered" && isDaily) {
-            s.items.forEach((it) => {
-              deliveredItems[it.name] = (deliveredItems[it.name] || 0) + it.qty;
-            });
+          // Logic for Delivered/Sales Reports
+          if (s.status === "delivered") {
+            if (isDaily) {
+              s.items.forEach((it) => {
+                deliveredItems[it.name] =
+                  (deliveredItems[it.name] || 0) + it.qty;
+              });
+              dailyShops.push(s);
+            }
+
+            if (isMonthly) {
+              monthlyTotal += s.netTotal || 0;
+            }
           }
-          if (s.status === "delivered" && isMonthly) {
-            monthlyTotal += s.netTotal || 0;
-            if (isDaily) dailyShops.push(s);
-          }
+
+          // Logic for Free Issues (Monthly)
           if (isMonthly) {
             s.items.forEach((it) => {
-              if (it.free > 0)
+              if (it.free > 0) {
                 freeIssues.push({
                   shop: s.shop,
                   bill: s.billNo,
@@ -1107,10 +1230,12 @@
                   item: it.name,
                   qty: it.free,
                 });
+              }
             });
           }
         });
 
+        // --- RENDER HTML ---
         let html = `
     <div class="summary-header" style="text-align: left; border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px;">
       <h1 style="margin:0;">GAMIRASA FOOD PRODUCTS</h1>
@@ -1128,65 +1253,151 @@
 
         if (type === "pending_shops") {
           html += `<div class="section-title">Delivery Schedule & Collection Sheet</div>
-             <table class="summary-table">
-               <thead>
-                 <tr>
-                   <th>Shop Name / Bill</th>
-                   <th style="text-align:right;">Bill Amt</th>
-                   <th style="text-align:right;">Prev. Credit</th>
-                   <th style="text-align:center; width: 40px; border: 1px solid #cbd5e1;">F1</th>
-                   <th style="text-align:center; width: 40px; border: 1px solid #cbd5e1;">F2</th>
-                 </tr>
-               </thead>`;
+     <table class="summary-table">
+       <thead>
+         <tr>
+           <th style="width: 25%;">Shop Name / Bill</th>
+           <th style="text-align:right; width: 15%;">Bill Amt</th>
+           <th style="text-align:right; width: 15%;">Prev. Credit</th>
+           <th style="text-align:center; width: 12%; border: 1px solid #cbd5e1;">CASH</th>
+           <th style="text-align:center; width: 12%; border: 1px solid #cbd5e1;">CREDIT</th>
+           <th style="text-align:center; width: 21%; border: 1px solid #cbd5e1;">REMARKS</th>
+         </tr>
+       </thead>`;
+
           pendingByShop.forEach((p) => {
             html += `<tr>
-          <td><b>${p.shop}</b><br><small>#${p.bill}</small></td>
-          <td style="text-align:right;">${p.amount.toFixed(2)}</td>
-          <td style="text-align:right; color:red;">${p.credit.toFixed(2)}</td>
-          <td style="border: 1px solid #cbd5e1;"></td><td style="border: 1px solid #cbd5e1;"></td>
-        </tr>`;
+      <td><b>${p.shop}</b><br><small>#${p.bill}</small></td>
+      <td style="text-align:right;">${p.amount.toFixed(2)}</td>
+      <td style="text-align:right; color:red;">${p.credit.toFixed(2)}</td>
+      <td style="border: 1px solid #cbd5e1; height: 30px;"></td>
+      <td style="border: 1px solid #cbd5e1;"></td>
+      <td style="border: 1px solid #cbd5e1;"></td>
+    </tr>`;
           });
-          html += `</table>`;
+
+          html += `</table>
+    <div style="margin-top: 15px; font-size: 0.7rem; color: #64748b;">
+      * Use the <b>REMARKS</b> column to note if a shop is closed or if items were rejected.
+    </div>`;
         }
 
         if (type === "pending") {
           html += `<div class="section-title">Stock Load-out Requirement</div>
-             <table class="summary-table">
-               <thead><tr><th>Product Description</th><th style="text-align:right;">Quantity</th></tr></thead>`;
+       <table class="summary-table">
+         <thead><tr><th>Product Description</th><th style="text-align:right;">Quantity</th></tr></thead>`;
           for (let name in pendingItems)
             html += `<tr><td>${name}</td><td style="text-align:right;">${pendingItems[name]}</td></tr>`;
           html += `</table>`;
         }
 
-        // --- RESTORED BLOCKS BELOW ---
         if (type === "delivered") {
           html += `<div class="section-title">Daily Sales Distribution</div>
-             <table class="summary-table">
-               <thead><tr><th>Product Description</th><th style="text-align:right;">Total Sold</th></tr></thead>`;
+       <table class="summary-table">
+         <thead><tr><th>Product Description</th><th style="text-align:right;">Total Sold</th></tr></thead>`;
           for (let name in deliveredItems)
             html += `<tr><td>${name}</td><td style="text-align:right;">${deliveredItems[name]}</td></tr>`;
           html += `</table>`;
         }
-
         if (type === "shops") {
-          html += `<div class="section-title">Shop Collection Audit</div>
-             <table class="summary-table">
-               <thead><tr><th>Shop Name</th><th>Bill No</th><th style="text-align:right;">Amount (Rs.)</th></tr></thead>`;
-          dailyShops.forEach((s) => {
-            html += `<tr><td>${s.shop}</td><td>#${s.billNo}</td><td style="text-align:right;">${(s.netTotal || 0).toFixed(2)}</td></tr>`;
+          let totalCash = 0;
+          let totalCredit = 0;
+          let totalSettlements = 0;
+          let settlementRows = "";
+
+          // 1. Process Settlements (Collections from old bills)
+          // We scan all representative keys to find any settlement made on the targetDate
+          Object.keys(db).forEach((key) => {
+            if (key.startsWith("sales_") && Array.isArray(db[key])) {
+              db[key].forEach((s) => {
+                if (s.settlementHistory) {
+                  s.settlementHistory.forEach((history) => {
+                    if (history.date === targetDate) {
+                      totalSettlements += history.amount;
+                      settlementRows += `
+                <tr>
+                  <td>${s.shop} <br><small style="color:blue;">(Credit Settlement)</small></td>
+                  <td>#${s.billNo}</td>
+                  <td style="text-align:right;">${history.amount.toFixed(2)}</td>
+                  <td style="text-align:right;">-</td>
+                  <td style="text-align:right;">${history.amount.toFixed(2)}</td>
+                </tr>`;
+                    }
+                  });
+                }
+              });
+            }
           });
+
+          // 2. Start building the HTML Table
+          html += `<div class="section-title">Shop Collection Audit & Daily Totals</div>
+     <table class="summary-table">
+       <thead>
+         <tr>
+           <th>Shop Name / Bill</th>
+           <th>Bill No</th>
+           <th style="text-align:right;">Cash (Rs.)</th>
+           <th style="text-align:right;">Credit (Rs.)</th>
+           <th style="text-align:right;">Total (Rs.)</th>
+         </tr>
+       </thead>`;
+
+          // 3. Add Today's New Sales Rows
+          dailyShops.forEach((s) => {
+            const net = s.netTotal || 0;
+            const cashVal = s.payment === "cash" ? net : 0;
+            const creditVal = s.payment === "credit" ? net : 0;
+
+            totalCash += cashVal;
+            totalCredit += creditVal;
+
+            html += `<tr>
+      <td>${s.shop}</td>
+      <td>#${s.billNo}</td>
+      <td style="text-align:right;">${cashVal > 0 ? cashVal.toFixed(2) : "-"}</td>
+      <td style="text-align:right; color: red;">${creditVal > 0 ? creditVal.toFixed(2) : "-"}</td>
+      <td style="text-align:right; font-weight:bold;">${net.toFixed(2)}</td>
+    </tr>`;
+          });
+
+          // 4. Add the Settlement Rows
+          if (settlementRows) {
+            html += `<tr><td colspan="5" style="background:#f8fafc; font-size:0.7rem; font-weight:bold; padding:2px 8px;">PREVIOUS DEBT SETTLEMENTS</td></tr>`;
+            html += settlementRows;
+          }
+
+          // 5. THE FINAL TOTALS ROW (Today's Sales + Settlements)
+          const grandTotalAll = totalCash + totalCredit + totalSettlements;
+          const finalCashToHand = totalCash + totalSettlements;
+
           html += `
-      <tr style="background:#f1f5f9; font-weight:bold;">
-        <td colspan="2">MONTHLY CUMULATIVE TOTAL</td>
-        <td style="text-align:right; font-size: 1.1rem; color:#059669;">Rs. ${monthlyTotal.toFixed(2)}</td>
-      </tr>
-    </table>`;
+    <tr style="background:#f1f5f9; font-weight:bold; border-top: 2px solid #0f172a;">
+      <td colspan="2">TOTALS</td>
+      <td style="text-align:right; color:#059669;">Rs. ${totalCash.toFixed(2)}</td>
+      <td style="text-align:right; color:#dc2626;">Rs. ${totalCredit.toFixed(2)}</td>
+      <td style="text-align:right;">Rs. ${(totalCash + totalCredit).toFixed(2)}</td>
+    </tr>
+    <tr style="background:#e2e8f0; font-weight:bold;">
+      <td colspan="2">SETTLEMENTS ADDED</td>
+      <td style="text-align:right; color:#2563eb;">+ ${totalSettlements.toFixed(2)}</td>
+      <td style="text-align:right;">-</td>
+      <td style="text-align:right; color:#2563eb;">${totalSettlements.toFixed(2)}</td>
+    </tr>
+    <tr style="background:#0f172a; color:white; font-weight:800;">
+      <td colspan="2" style="font-size:1rem;">FINAL TRUCK BALANCE (CASH)</td>
+      <td colspan="3" style="text-align:right; font-size:1.2rem;">Rs. ${finalCashToHand.toFixed(2)}</td>
+    </tr>
+  </table>
+
+  <p style="margin-top:10px; font-size:0.8rem; color:#64748b;">
+    * Monthly Cumulative Sales (Net): Rs. ${monthlyTotal.toFixed(2)}
+  </p>`;
         }
 
         if (type === "free") {
           html += `<div class="section-title">Marketing & Free Issue Log (Monthly)</div>
-             <table class="summary-table">
-               <thead><tr><th>Date</th><th>Customer/Shop</th><th>Item Name</th><th style="text-align:right;">Qty</th></tr></thead>`;
+       <table class="summary-table">
+         <thead><tr><th>Date</th><th>Customer/Shop</th><th>Item Name</th><th style="text-align:right;">Qty</th></tr></thead>`;
           freeIssues.forEach((f) => {
             html += `<tr><td>${f.date}</td><td>${f.shop}</td><td>${f.item}</td><td style="text-align:right;">${f.qty}</td></tr>`;
           });
@@ -1201,7 +1412,19 @@
 
       function renderCreditList() {
         let total = 0;
-        const list = db.sales.filter(
+
+        // FIX: Use getRepSales() to fetch the correct array for the logged-in Rep
+        const salesData = getRepSales();
+
+        // Guard: If no sales records exist for this rep
+        if (!salesData || salesData.length === 0) {
+          document.getElementById("credit-data-list").innerHTML =
+            "<p style='padding:20px; text-align:center;'>No credit records found for this representative.</p>";
+          document.getElementById("credit-grand-total").innerText = "0.00";
+          return;
+        }
+
+        const list = salesData.filter(
           (s) => s.status === "delivered" && s.netTotal - s.paid > 0.01,
         );
 
@@ -1210,32 +1433,54 @@
             const bal = s.netTotal - s.paid;
             total += bal;
             return `
-                <div class="item-row">
-                    <div><b>${s.shop}</b><br><small>${s.billNo} | ${s.date}</small></div>
-                    <div style="text-align:right;">
-                        <b>Rs. ${bal.toFixed(2)}</b><br>
-                        <button class="no-print" onclick="settleCredit(${s.id})" style="width:auto; padding:2px 10px; font-size:0.6rem; margin-top:5px;">SETTLE</button>
-                    </div>
-                </div>
-            `;
+        <div class="item-row">
+            <div>
+              <b>${s.shop}</b><br>
+              <small>${s.billNo} | ${s.date}</small>
+            </div>
+            <div style="text-align:right;">
+                <b style="color:var(--danger);">Rs. ${bal.toFixed(2)}</b><br>
+                <button class="no-print" onclick="settleCredit(${s.id})" 
+                        style="width:auto; padding:5px 12px; font-size:0.7rem; margin-top:5px; background:var(--primary); color:white; border-radius:4px;">
+                  SETTLE
+                </button>
+            </div>
+        </div>`;
           })
           .join("");
+
         document.getElementById("credit-grand-total").innerText =
           total.toFixed(2);
-        document.getElementById("credit-print-date").innerText =
-          "Generated: " + new Date().toLocaleString();
       }
 
       function settleCredit(id) {
-        const sale = db.sales.find((s) => s.id === id);
-        const amt = prompt(
-          "Enter Payment Amount:",
-          (sale.netTotal - sale.paid).toFixed(2),
-        );
-        if (amt) {
-          sale.paid += parseFloat(amt);
-          triggerSync();
-          renderCreditList();
+        // Use getRepSales() to ensure we are looking in the correct representative's array
+        const salesData = getRepSales();
+        const sale = salesData.find((s) => s.id === id);
+
+        if (sale) {
+          const currentBal = (sale.netTotal - sale.paid).toFixed(2);
+          const amt = prompt(
+            `Enter Payment Amount for ${sale.shop}:`,
+            currentBal,
+          );
+
+          if (amt !== null && !isNaN(amt) && amt !== "") {
+            const parsedAmt = parseFloat(amt);
+            sale.paid += parsedAmt;
+
+            // CRITICAL: Record that this money was collected TODAY
+            // We store it in an array so a single bill can have multiple settlement dates
+            if (!sale.settlementHistory) sale.settlementHistory = [];
+            sale.settlementHistory.push({
+              date: new Date().toISOString().split("T")[0],
+              amount: parsedAmt,
+            });
+
+            triggerSync();
+            renderCreditList();
+            alert("Settlement recorded successfully.");
+          }
         }
       }
       function renderInventory() {
@@ -1259,36 +1504,39 @@
         document.getElementById("inventory-list").innerHTML =
           listHtml || "<p>No items in truck.</p>";
       }
+
       function renderDeliveryList() {
-        const pending = db.sales.filter((s) => s.status === "pending");
+        // CORRECTION: Safely get the active sales
+        const salesData = getActiveSalesArray();
+        const pending = salesData.filter((s) => s.status === "pending");
+
         document.getElementById("pending-delivery-list").innerHTML =
           pending
             .map(
               (s) => `
-            <div class="card">
-                <b>${s.shop}</b><br>
-                <small>Invoice: ${s.billNo} | Total: Rs. ${s.subtotal.toFixed(2)}</small>
-                <button class="btn-blue" style="margin-top:10px; padding:10px;" onclick="openInvoice(${s.id})">PROCESS DELIVERY</button>
-            </div>
-        `,
+        <div class="card">
+            <b>${s.shop}</b><br>
+            <small>Inv: ${s.billNo}</small>
+            <button class="btn-blue" onclick="openInvoice(${s.id})">DELIVER</button>
+            <button class="btn-red" onclick="cancelFullOrder(${s.id})" style="background:red; color:white;">SHOP CLOSED</button>
+        </div>
+    `,
             )
-            .join("") || "<p>No pending deliveries.</p>";
+            .join("") || "<p>No pending deliveries</p>";
       }
 
       function refreshUI() {
-        // 1. Update Admin Selectors
-        document.getElementById("adm-r-select").innerHTML = db.routes
-          .map((r, i) => `<option value="${i}">${r.name}</option>`)
-          .join("");
+        // Update admin selectors
+        if (document.getElementById("adm-r-select")) {
+          document.getElementById("adm-r-select").innerHTML = db.routes
+            .map((r, i) => `<option value="${i}">${r.name}</option>`)
+            .join("");
+        }
 
-        // 2. Identify which view is currently visible and refresh its data
-        const activeView = document
-          .querySelector(".nav-link.active")
-          ?.innerText.toLowerCase();
-        if (activeView === "delivery") renderDeliveryList();
-        if (activeView === "credits") renderCreditList();
-        if (activeView === "stocks") renderInventory();
-        if (activeView === "summary") generateSummary();
+        // REFRESH DATA BASED ON WHO IS LOGGED IN
+        renderDeliveryList(); // Now only shows Rep A or Rep B items
+        renderCreditList(); // Now only shows Rep A or Rep B credits
+        renderInventory(); // Shows shared truck stock
       }
 
       function closeBill() {
